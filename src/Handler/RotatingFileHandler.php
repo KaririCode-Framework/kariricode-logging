@@ -5,59 +5,57 @@ declare(strict_types=1);
 namespace KaririCode\Logging\Handler;
 
 use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogRotator;
 use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\LogLevel;
 
 class RotatingFileHandler extends AbstractFileHandler
 {
-    private int $maxFiles;
-    private int $maxFileSize;
+    private LogRotator $rotator;
 
     public function __construct(
         string $filePath,
-        int $maxFiles = 5,
-        int $maxFileSize = 5 * 1024 * 1024, // 5 MB
+        LogRotator $rotator,
         LogLevel $minLevel = LogLevel::DEBUG
     ) {
         parent::__construct($filePath, $minLevel);
-        $this->maxFiles = $maxFiles;
-        $this->maxFileSize = $maxFileSize;
+        $this->rotator = $rotator;
     }
 
+    /**
+     * @throws LoggingException
+     */
     public function handle(ImmutableValue $record): void
     {
         if (!$this->isHandling($record)) {
             return;
         }
 
-        if ($this->shouldRotate()) {
-            $this->rotate();
+        try {
+            $this->rotateIfNecessary();
+            $this->writeToFile($record);
+        } catch (\Exception $e) {
+            throw new LoggingException("Error handling log record: " . $e->getMessage(), 0, $e);
         }
-
-        $this->writeToFile($record);
     }
 
-    private function shouldRotate(): bool
+    /**
+     * @throws \Exception
+     */
+    private function rotateIfNecessary(): void
     {
-        return file_exists($this->filePath) && filesize($this->filePath) >= $this->maxFileSize;
+        if ($this->rotator->shouldRotate($this->filePath)) {
+            $this->rotator->rotate($this->filePath);
+            $this->reopenFile();
+        }
     }
 
-    private function rotate(): void
+    private function reopenFile(): void
     {
-        for ($i = $this->maxFiles - 1; $i > 0; --$i) {
-            $source = "{$this->filePath}.{$i}";
-            $target = "{$this->filePath}." . ($i + 1);
-            if (file_exists($source)) {
-                if (!rename($source, $target)) {
-                    throw new LoggingException("Failed to rotate log file from {$source} to {$target}");
-                }
-            }
-        }
-
-        // Close the current file handle and open a new one
         if (is_resource($this->fileHandle)) {
             fclose($this->fileHandle);
         }
+        $this->fileHandle = null;
         $this->openFile();
     }
 }

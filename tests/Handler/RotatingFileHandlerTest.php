@@ -2,105 +2,136 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\Handler;
+namespace Tests\KaririCode\Logging\Handler;
 
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogRotator;
 use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\Handler\RotatingFileHandler;
 use KaririCode\Logging\LogLevel;
-use KaririCode\Logging\LogRecord;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class RotatingFileHandlerTest extends TestCase
 {
-    private string $testLogDir;
-    private string $testLogFile;
-    private RotatingFileHandler $rotatingFileHandler;
+    private string $tempDir;
+    private string $logFile;
+    private LogRotator|MockObject $mockRotator;
 
     protected function setUp(): void
     {
-        $this->testLogDir = sys_get_temp_dir() . '/test_rotating_logs';
-        $this->testLogFile = $this->testLogDir . '/test_rotating.log';
+        $this->tempDir = sys_get_temp_dir() . '/rotating_file_handler_test_' . uniqid();
+        mkdir($this->tempDir);
+        $this->logFile = $this->tempDir . '/test.log';
+        $this->mockRotator = $this->createMock(LogRotator::class);
+    }
 
-        if (!is_dir($this->testLogDir)) {
-            mkdir($this->testLogDir, 0777, true);
+    protected function tearDown(): void
+    {
+        $this->removeDirectory($this->tempDir);
+    }
+
+    private function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
         }
-
-        $this->rotatingFileHandler = new RotatingFileHandler(
-            $this->testLogFile
-        );
-    }
-
-    public function testHandleHappyPath(): void
-    {
-        $record = new LogRecord(LogLevel::INFO, 'Test message');
-        $this->rotatingFileHandler->handle($record);
-
-        $this->assertFileExists($this->testLogFile);
-        $this->assertStringContainsString('Test message', file_get_contents($this->testLogFile));
-    }
-
-    public function testRotateLogs(): void
-    {
-        $this->rotatingFileHandler = new RotatingFileHandler($this->testLogFile, 2, 10); // Smaller file size
-
-        for ($i = 0; $i < 5; ++$i) {
-            $record = new LogRecord(LogLevel::INFO, str_repeat('A', 10));
-            $this->rotatingFileHandler->handle($record);
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            (is_dir("$dir/$file")) ? $this->removeDirectory("$dir/$file") : unlink("$dir/$file");
         }
-
-        $this->assertFileExists($this->testLogFile);
-        $this->assertFileExists($this->testLogFile . '.1');
-        $this->assertFileExists($this->testLogFile . '.2');
+        rmdir($dir);
     }
 
-    public function testHandleThrowsExceptionOnWriteFailure(): void
+    public function testHandleWritesLogWhenLevelIsHighEnough(): void
     {
+        $handler = new RotatingFileHandler($this->logFile, $this->mockRotator, LogLevel::INFO);
+        $record = $this->createMock(ImmutableValue::class);
+        $record->method('get')->willReturn([
+            'level' => LogLevel::ERROR,
+            'message' => 'Test error message',
+            'context' => [],
+        ]);
+
+        $handler->handle($record);
+
+        $this->assertFileExists($this->logFile);
+        $this->assertStringContainsString('Test error message', file_get_contents($this->logFile));
+    }
+
+    public function testHandleDoesNotWriteLogWhenLevelIsTooLow(): void
+    {
+        $handler = new RotatingFileHandler($this->logFile, $this->mockRotator, LogLevel::ERROR);
+        $record = $this->createMock(ImmutableValue::class);
+        $record->method('get')->willReturn([
+            'level' => LogLevel::INFO,
+            'message' => 'Test info message',
+            'context' => [],
+        ]);
+
+        $handler->handle($record);
+
+        $this->assertFileDoesNotExist($this->logFile);
+    }
+
+    public function testHandleRotatesFileWhenNecessary(): void
+    {
+        $this->mockRotator->method('shouldRotate')->willReturn(true);
+        $this->mockRotator->expects($this->once())->method('rotate');
+
+        $handler = new RotatingFileHandler($this->logFile, $this->mockRotator);
+        $record = $this->createMock(ImmutableValue::class);
+        $record->method('get')->willReturn([
+            'level' => LogLevel::INFO,
+            'message' => 'Test rotation message',
+            'context' => [],
+        ]);
+
+        $handler->handle($record);
+
+        $this->assertFileExists($this->logFile);
+        $this->assertStringContainsString('Test rotation message', file_get_contents($this->logFile));
+    }
+
+    public function testHandleThrowsLoggingExceptionOnError(): void
+    {
+        $this->mockRotator->method('shouldRotate')->willThrowException(new \RuntimeException('Rotation error'));
+
+        $handler = new RotatingFileHandler($this->logFile, $this->mockRotator);
+        $record = $this->createMock(ImmutableValue::class);
+        $record->method('get')->willReturn([
+            'level' => LogLevel::INFO,
+            'message' => 'Test error handling',
+            'context' => [],
+        ]);
+
         $this->expectException(LoggingException::class);
-        $this->expectExceptionMessage('Unable to create log directory: /invalid');
+        $this->expectExceptionMessage('Error handling log record: Rotation error');
 
-        // Suppress warnings for this test
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-            return true;
-        });
-
-        try {
-            $invalidHandler = new RotatingFileHandler('/invalid/path.log');
-            $record = new LogRecord(LogLevel::INFO, 'Test message');
-            $invalidHandler->handle($record);
-        } finally {
-            restore_error_handler();
-        }
+        $handler->handle($record);
     }
 
-    public function testMaxFiles(): void
+    public function testHandleReopensFileAfterRotation(): void
     {
-        $this->rotatingFileHandler = new RotatingFileHandler($this->testLogFile, 3, 10);
+        $this->mockRotator->method('shouldRotate')->willReturnOnConsecutiveCalls(true, false);
+        $this->mockRotator->expects($this->once())->method('rotate');
 
-        for ($i = 0; $i < 5; ++$i) {
-            $record = new LogRecord(LogLevel::INFO, str_repeat('A', 10));
-            $this->rotatingFileHandler->handle($record);
-        }
+        $handler = new RotatingFileHandler($this->logFile, $this->mockRotator);
+        $record = $this->createMock(ImmutableValue::class);
+        $record->method('get')->willReturn([
+            'level' => LogLevel::INFO,
+            'message' => 'Test message',
+            'context' => [],
+        ]);
 
-        $this->assertFileExists($this->testLogFile);
-        $this->assertFileExists($this->testLogFile . '.1');
-        $this->assertFileExists($this->testLogFile . '.2');
-        $this->assertFileExists($this->testLogFile . '.3');
-        $this->assertFileDoesNotExist($this->testLogFile . '.4');
-    }
+        // First call - should rotate and reopen
+        $handler->handle($record);
 
-    public function testRespectLogLevel(): void
-    {
-        $this->rotatingFileHandler = new RotatingFileHandler($this->testLogFile, 2, 50, LogLevel::WARNING);
+        // Second call - should write to the reopened file
+        $handler->handle($record);
 
-        $infoRecord = new LogRecord(LogLevel::INFO, 'Info message');
-        $warningRecord = new LogRecord(LogLevel::WARNING, 'Warning message');
-
-        $this->rotatingFileHandler->handle($infoRecord);
-        $this->rotatingFileHandler->handle($warningRecord);
-
-        $this->assertFileExists($this->testLogFile);
-        $content = file_get_contents($this->testLogFile);
-        $this->assertStringNotContainsString('Info message', $content);
-        $this->assertStringContainsString('Warning message', $content);
+        $this->assertFileExists($this->logFile);
+        $logContent = file_get_contents($this->logFile);
+        $this->assertEquals(2, substr_count($logContent, 'Test message'));
     }
 }

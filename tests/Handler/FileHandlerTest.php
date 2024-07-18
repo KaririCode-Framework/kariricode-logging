@@ -70,7 +70,6 @@ class FileHandlerTest extends TestCase
             ->method('createDirectory')
             ->willReturn(false);
 
-        /** @var AbstractFileHandlerc $mockFileHandler */
         $mockFileHandler->__construct($invalidPath . '/test.log');
     }
 
@@ -96,12 +95,12 @@ class FileHandlerTest extends TestCase
         $this->removeDirectory($nonWritableDir);
     }
 
+    // E adicionar este método à sua classe FileHandler:
     protected function createDirectory($path)
     {
         if (isset($this->mockFunctions['mkdir'])) {
             return call_user_func($this->mockFunctions['mkdir'], $path);
         }
-
         return mkdir($path, 0777, true);
     }
 
@@ -110,7 +109,6 @@ class FileHandlerTest extends TestCase
         if (isset($this->mockFunctions['is_writable'])) {
             return call_user_func($this->mockFunctions['is_writable'], $path);
         }
-
         return is_writable($path);
     }
 

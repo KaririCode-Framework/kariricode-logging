@@ -25,6 +25,6 @@ class ConfigHelperTest extends TestCase
 
     public function testFindRootPath(): void
     {
-        $this->assertStringContainsString('tests', ConfigHelper::findRootPath());
+        $this->assertStringContainsString('/app', ConfigHelper::findRootPath());
     }
 }

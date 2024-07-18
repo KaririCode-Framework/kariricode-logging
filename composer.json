@@ -1,0 +1,77 @@
+{
+  "name": "kariricode/logging",
+  "description": "A robust, flexible, and PSR-3 compliant logging component for the KaririCode Framework, providing comprehensive logging capabilities for PHP applications.",
+  "keywords": [
+    "Logging",
+    "PSR-3",
+    "php",
+    "KaririCode",
+    "framework",
+    "Logger",
+    "Log Handler",
+    "Log Formatter",
+    "Log Processor",
+    "Log Rotator",
+    "Asynchronous Logging",
+    "Context Logging",
+    "Error Logging",
+    "Application Logging",
+    "System Monitoring"
+  ],
+  "homepage": "https://kariricode.org/",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Walmir Silva",
+      "email": "walmir.silva@kariricode.org"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "KaririCode\\Logging\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KaririCode\\Logging\\Tests\\": "tests"
+    }
+  },
+  "require": {
+    "php": "^8.3",
+    "kariricode/contract": "^2.6",
+    "composer/composer": "^2.7"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.58",
+    "nunomaduro/phpinsights": "^2.11",
+    "phpunit/phpunit": "^10.5",
+    "squizlabs/php_codesniffer": "^3.10",
+    "mockery/mockery": "^1.6",
+    "enlightn/security-checker": "^2.0"
+  },
+  "scripts": {
+    "post-package-install": [
+      "KaririCode\\Logging\\Util\\ComposerScripts::postPackageInstall"
+    ]
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "1.0.x-dev"
+    },
+    "kariricode/logging": {
+      "default-channel": "stack",
+      "config-file": "config/logging.php"
+    }
+  },
+  "support": {
+    "issues": "https://github.com/KaririCode-Framework/kariricode-logging/issues",
+    "source": "https://github.com/KaririCode-Framework/kariricode-logging"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "minimum-stability": "stable"
+}

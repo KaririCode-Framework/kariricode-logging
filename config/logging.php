@@ -92,10 +92,6 @@ return [
             'class' => \KaririCode\Logging\Processor\IntrospectionProcessor::class,
             'level' => LogLevel::DEBUG,
         ],
-        'git' => [
-            'class' => \KaririCode\Logging\Processor\GitProcessor::class,
-            'level' => LogLevel::INFO,
-        ],
         'memory_usage' => [
             'class' => \KaririCode\Logging\Processor\MemoryUsageProcessor::class,
             'level' => LogLevel::DEBUG,

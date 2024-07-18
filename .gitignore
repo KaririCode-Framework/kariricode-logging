@@ -60,7 +60,3 @@ tmp/
 .vscode/launch.json
 .vscode/extensions.json
 tests/lista_de_arquivos.php
-lista_de_arquivos.txt
-
-/storage
-/tmp

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\Tests\Handler;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Contract\Logging\LogRotator;

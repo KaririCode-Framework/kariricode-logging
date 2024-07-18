@@ -35,7 +35,7 @@ class RotatingFileHandler extends AbstractFileHandler
             $this->rotateIfNecessary();
             $this->writeToFile($record);
         } catch (\Exception $e) {
-            throw new LoggingException("Error handling log record: " . $e->getMessage(), 0, $e);
+            throw new LoggingException('Error handling log record: ' . $e->getMessage(), 0, $e);
         }
     }
 

@@ -139,7 +139,7 @@ final class SlackClientTest extends TestCase
         $fallbackCalled = false;
         $this->fallback->expects($this->once())
             ->method('execute')
-            ->willReturnCallback(function ($primary, $fallback) use (&$fallbackCalled, $exception) {
+            ->willReturnCallback(function ($primary, $fallback) use (&$fallbackCalled) {
                 try {
                     $primary();
                 } catch (\Throwable $e) {

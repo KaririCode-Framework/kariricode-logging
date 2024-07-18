@@ -25,13 +25,14 @@ class CircuitBreaker
         }
 
         if ($this->failures >= $this->failureThreshold) {
-            if ($this->lastFailureTime === null) {
+            if (null === $this->lastFailureTime) {
                 return true;
             }
 
             $elapsedTime = time() - $this->lastFailureTime->getTimestamp();
             if ($elapsedTime > $this->resetTimeout) {
                 $this->resetFailures();
+
                 return false;
             }
 

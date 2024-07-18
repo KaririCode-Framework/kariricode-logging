@@ -49,7 +49,7 @@ class AsyncLoggerTest extends TestCase
                 $this->assertSame($logs[$callCount][0], $level);
                 $this->assertSame($logs[$callCount][1], $message);
                 $this->assertSame($logs[$callCount][2], $context);
-                $callCount++;
+                ++$callCount;
             });
 
         foreach ($logs as $log) {

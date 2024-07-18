@@ -24,7 +24,7 @@ enum LogLevel: string implements LoggingLogLevel
 
     public function getValue(): int
     {
-        return match($this) {
+        return match ($this) {
             self::EMERGENCY => 800,
             self::ALERT => 700,
             self::CRITICAL => 600,

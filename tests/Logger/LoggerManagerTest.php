@@ -6,14 +6,11 @@ namespace KaririCode\Logging\Test\Logger;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Contract\Logging\LogFormatter;
-use KaririCode\Contract\Logging\LogHandler;
-use KaririCode\Contract\Logging\Structural\FormatterAware;
 use KaririCode\Contract\Logging\Structural\HandlerAware;
 use KaririCode\Contract\Logging\Structural\ProcessorAware;
 use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\Handler\AbstractHandler;
 use KaririCode\Logging\Handler\ConsoleHandler;
-use KaririCode\Logging\Handler\NullHandler;
 use KaririCode\Logging\LoggerManager;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
@@ -67,7 +64,6 @@ class LoggerManagerTest extends TestCase
         $mockHandler->expects($this->once())
             ->method('handle')
             ->with($this->isInstanceOf(ImmutableValue::class));
-
 
         $processor = $this->createMock(AbstractProcessor::class);
         $processor->expects($this->once())

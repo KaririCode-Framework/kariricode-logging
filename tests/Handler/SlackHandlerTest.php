@@ -9,8 +9,8 @@ use KaririCode\Logging\Handler\SlackHandler;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Util\SlackClient;
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 class SlackHandlerTest extends TestCase
 {

@@ -10,9 +10,8 @@ class SizeBasedRotator implements LogRotator
 {
     public function __construct(
         private int $maxFiles = 5,
-        private  int $maxFileSize = 5 * 1024 * 1024
+        private int $maxFileSize = 5 * 1024 * 1024
     ) {
-
     }
 
     public function shouldRotate(string $filePath): bool

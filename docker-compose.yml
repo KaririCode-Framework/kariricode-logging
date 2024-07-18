@@ -1,8 +1,8 @@
-version: "3.8"
+name: kariricode-logging
 
 services:
   php:
-    container_name: kariricode-contract
+    container_name: kariricode-logging
     build:
       context: .
       dockerfile: .docker/php/Dockerfile

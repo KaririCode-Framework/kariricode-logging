@@ -14,7 +14,7 @@ use KaririCode\Logging\Util\SlackClient;
 
 class LoggerFactory
 {
-    public static function createLogger(string $name, array $config): Logger
+    public function createLogger(string $name, array $config): Logger
     {
         $handlers = [];
         $processors = [];
@@ -61,22 +61,22 @@ class LoggerFactory
         return new LoggerManager($name, $handlers, $processors, $formatter);
     }
 
-    public static function createQueryLogger(array $config): Logger
+    public function createQueryLogger(array $config): Logger
     {
-        return self::createLogger('query', $config);
+        return $this->createLogger('query', $config);
     }
 
-    public static function createPerformanceLogger(array $config): Logger
+    public function createPerformanceLogger(array $config): Logger
     {
-        return self::createLogger('performance', $config);
+        return $this->createLogger('performance', $config);
     }
 
-    public static function createErrorLogger(array $config): Logger
+    public function createErrorLogger(array $config): Logger
     {
-        return self::createLogger('error', $config);
+        return $this->createLogger('error', $config);
     }
 
-    public static function createAsyncLogger(Logger $logger, int $batchSize): Logger
+    public function createAsyncLogger(Logger $logger, int $batchSize): Logger
     {
         return new AsyncLogger($logger, $batchSize);
     }

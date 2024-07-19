@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use KaririCode\Logging\LoggerConfiguration;
+use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
 use KaririCode\Logging\Service\LoggerServiceProvider;
 use KaririCode\Logging\Util\ConfigHelper;
@@ -15,10 +16,18 @@ $configPath = __DIR__ . '/../config/logging.php';
 $loggerConfig = new LoggerConfiguration();
 $loggerConfig->load($configPath);
 
-$serviceProvider = new LoggerServiceProvider();
-$serviceProvider->register($loggerConfig);
 
-$defaultLogger = LoggerRegistry::getLogger('console');
+$loggerFactory = new LoggerFactory();
+$loggerRegistry = new LoggerRegistry();
+$serviceProvider = new LoggerServiceProvider(
+    $loggerConfig,
+    $loggerFactory,
+    $loggerRegistry
+);
+
+$serviceProvider->register();
+
+$defaultLogger = $loggerRegistry->getLogger('console');
 $defaultLogger->debug('This is a debug message', ['context' => 'debug']);
 $defaultLogger->info('This is an info message');
 $defaultLogger->notice('This is a notice message', ['context' => 'notice']);
@@ -28,14 +37,14 @@ $defaultLogger->critical('This is a critical message', ['context' => 'critical']
 $defaultLogger->alert('This is an alert message', ['context' => 'alert']);
 $defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
 
-$asyncLogger = LoggerRegistry::getLogger('async');
+$asyncLogger = $loggerRegistry->getLogger('async');
 if ($asyncLogger) {
     for ($i = 0; $i < 2; ++$i) {
         $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
     }
 }
 
-$queryLogger = LoggerRegistry::getLogger('query');
+$queryLogger = $loggerRegistry->getLogger('query');
 $queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => [], 'time' => 150]);
 
 // // Testa o performance logger

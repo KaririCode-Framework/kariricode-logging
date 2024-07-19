@@ -8,20 +8,20 @@ use KaririCode\Contract\Logging\Logger;
 
 class LoggerRegistry
 {
-    private static array $loggers = [];
+    private array $loggers = [];
 
-    public static function addLogger(string $name, Logger $logger): void
+    public function addLogger(string $name, Logger $logger): void
     {
-        self::$loggers[$name] = $logger;
+        $this->loggers[$name] = $logger;
     }
 
-    public static function getLogger(string $name): ?Logger
+    public function getLogger(string $name): ?Logger
     {
-        return self::$loggers[$name] ?? null;
+        return $this->loggers[$name] ?? null;
     }
 
-    public static function removeLogger(string $name): void
+    public function removeLogger(string $name): void
     {
-        unset(self::$loggers[$name]);
+        unset($this->loggers[$name]);
     }
 }

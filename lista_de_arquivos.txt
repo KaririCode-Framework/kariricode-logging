@@ -1,0 +1,2737 @@
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Decorator;
+
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Contract\Logging\LogLevel;
+use KaririCode\Logging\LogRecord;
+use KaririCode\Logging\Processor\AsyncLogProcessor;
+
+class AsyncLogger extends BaseLoggerDecorator
+{
+    private AsyncLogProcessor $processor;
+
+    public function __construct(Logger $logger, int $batchSize = 10)
+    {
+        parent::__construct($logger);
+        $this->processor = new AsyncLogProcessor($logger, $batchSize);
+    }
+
+    public function log(LogLevel $level, \Stringable|string $message, array $context = []): void
+    {
+        $record = new LogRecord($level, $message, $context);
+        $this->processor->enqueue($record);
+    }
+
+    public function __destruct()
+    {
+        // Explicitly call the destructor to ensure all logs are processed before object is destroyed
+        $this->processor->__destruct();
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Decorator;
+
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Contract\Logging\LogLevel;
+use KaririCode\Logging\Trait\LoggerTrait;
+
+abstract class BaseLoggerDecorator implements Logger
+{
+    use LoggerTrait;
+
+    protected Logger $logger;
+
+    public function __construct(Logger $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    public function log(LogLevel $level, \Stringable|string $message, array $context = []): void
+    {
+        $this->logger->log($level, $message, $context);
+    }
+
+    public function getName(): string
+    {
+        return $this->logger->getName();
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Decorator;
+
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Contract\Logging\LogLevel;
+
+class ContextualLogger extends BaseLoggerDecorator
+{
+    private array $additionalContext;
+
+    public function __construct(Logger $logger, array $additionalContext)
+    {
+        parent::__construct($logger);
+        $this->additionalContext = $additionalContext;
+    }
+
+    public function log(LogLevel $level, \Stringable|string $message, array $context = []): void
+    {
+        $mergedContext = array_merge($this->additionalContext, $context);
+        $this->logger->log($level, $message, $mergedContext);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Exception;
+
+class CircuitBreakerOpenException extends \Exception
+{
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Exception;
+
+class LoggingException extends \Exception
+{
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Formatter;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\Structural\FormatterAware;
+
+abstract class AbstractFormatter implements LogFormatter, FormatterAware, ImmutableValue
+{
+    protected ImmutableValue $formatter;
+
+    public function __construct(
+        protected string $dateFormat = 'Y-m-d H:i:s'
+    ) {
+        $this->formatter = $this;
+    }
+
+    abstract public function format(ImmutableValue $record): string;
+
+    public function formatBatch(array $records): string
+    {
+        return implode("\n", array_map([$this, 'format'], $records));
+    }
+
+    public function setFormatter(ImmutableValue $formatter): AbstractFormatter
+    {
+        $this->formatter = $formatter;
+
+        return $this;
+    }
+
+    public function getFormatter(): ImmutableValue
+    {
+        return $this->formatter;
+    }
+
+    // Implement the toArray method required by ImmutableValue interface
+    public function toArray(): array
+    {
+        return [
+            'dateFormat' => $this->dateFormat,
+            'formatter' => $this->formatter instanceof ImmutableValue ? $this->formatter->toArray() : (string) $this->formatter,
+        ];
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Formatter;
+
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Logging\LogLevel;
+
+class ConsoleColorFormatter
+{
+    private array $colors = [
+        LogLevel::DEBUG->value => "\033[0;37m", // Light gray
+        LogLevel::INFO->value => "\033[0;32m",  // Green
+        LogLevel::NOTICE->value => "\033[1;34m", // Light blue
+        LogLevel::WARNING->value => "\033[1;33m", // Yellow
+        LogLevel::ERROR->value => "\033[0;31m", // Red
+        LogLevel::CRITICAL->value => "\033[1;35m", // Magenta
+        LogLevel::ALERT->value => "\033[1;31m", // Light red
+        LogLevel::EMERGENCY->value => "\033[1;37m\033[41m", // White on red background
+    ];
+    private string $resetColor = "\033[0m";
+
+    public function format(LoggingLogLevel $level, string $message): string
+    {
+        return $this->colors[$level->value] . $message . $this->resetColor;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Formatter;
+
+use KaririCode\Contract\ImmutableValue;
+
+class ElasticFormatter extends AbstractFormatter
+{
+    public function format(ImmutableValue $record): string
+    {
+        $data = [
+            '@timestamp' => $record->datetime->format('c'),
+            'message' => $record->message,
+            'level' => $record->level->value,
+            'context' => $record->context,
+        ];
+
+        return json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Formatter;
+
+use KaririCode\Contract\ImmutableValue;
+
+class JsonFormatter extends AbstractFormatter
+{
+    private const JSON_OPTIONS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+
+    public function format(ImmutableValue $record): string
+    {
+        $data = $this->prepareData($record);
+
+        return $this->encodeJson($data);
+    }
+
+    public function formatBatch(array $records): string
+    {
+        $formattedRecords = array_map([$this, 'prepareData'], $records);
+
+        return $this->encodeJson($formattedRecords);
+    }
+
+    private function prepareData(ImmutableValue $record): array
+    {
+        $data = [
+            'datetime' => $record->datetime->format($this->dateFormat),
+            'level' => $record->level->value,
+            'message' => $record->message,
+        ];
+
+        if (!empty($record->context)) {
+            $data['context'] = $record->context;
+        }
+
+        return $data;
+    }
+
+    private function encodeJson($data): string
+    {
+        return json_encode($data, self::JSON_OPTIONS | JSON_THROW_ON_ERROR);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Formatter;
+
+use KaririCode\Contract\ImmutableValue;
+
+class LineFormatter extends AbstractFormatter
+{
+    public function format(ImmutableValue $record): string
+    {
+        $date = $record->datetime->format($this->dateFormat);
+        $level = strtoupper($record->level->value);
+        $message = $record->message;
+        $context = !empty($record->context) ? json_encode(
+            $record->context,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        ) : '';
+
+        return $context ?
+            "[$date] $level: $message $context" :
+            "[$date] $level: $message";
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Logging\Exception\LoggingException;
+use KaririCode\Logging\LogLevel;
+
+abstract class AbstractFileHandler extends AbstractHandler
+{
+    protected mixed $fileHandle;
+
+    public function __construct(
+        protected readonly string $filePath,
+        LogLevel $minLevel = LogLevel::DEBUG
+    ) {
+        parent::__construct($minLevel);
+        $this->ensureDirectoryExists();
+        $this->openFile();
+    }
+
+    protected function ensureDirectoryExists(): void
+    {
+        $directory = dirname($this->filePath);
+        if (!is_dir($directory)) {
+            if (!$this->createDirectory($directory)) {
+                throw new LoggingException("Unable to create log directory: $directory");
+            }
+        } elseif (!$this->isDirectoryWritable($directory)) {
+            throw new LoggingException("Log directory is not writable: $directory");
+        }
+    }
+
+    protected function createDirectory($path)
+    {
+        return mkdir($path, 0777, true);
+    }
+
+    protected function isDirectoryWritable($path)
+    {
+        return is_writable($path);
+    }
+
+    protected function openFile(): void
+    {
+        $this->fileHandle = fopen($this->filePath, 'a');
+        if (!$this->fileHandle) {
+            throw new LoggingException("Unable to open log file: {$this->filePath}");
+        }
+    }
+
+    abstract public function handle(ImmutableValue $record): void;
+
+    protected function writeToFile(ImmutableValue $record): void
+    {
+        $formatted = $this->formatter->format($record);
+        if (false === fwrite($this->fileHandle, $formatted . PHP_EOL)) {
+            throw new LoggingException('Failed to write to log file');
+        }
+    }
+
+    public function __destruct()
+    {
+        if (is_resource($this->fileHandle)) {
+            fclose($this->fileHandle);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\LogHandler;
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Contract\Logging\Structural\HandlerAware;
+use KaririCode\Logging\Formatter\LineFormatter;
+use KaririCode\Logging\LogLevel;
+
+abstract class AbstractHandler implements LogHandler, HandlerAware
+{
+    protected array $handlers = [];
+
+    public function __construct(
+        protected LoggingLogLevel $minLevel = LogLevel::DEBUG,
+        protected LogFormatter $formatter = new LineFormatter()
+    ) {
+    }
+
+    public function setFormatter(LogFormatter $formatter): self
+    {
+        $this->formatter = $formatter;
+
+        return $this;
+    }
+
+    public function isHandling(ImmutableValue $record): bool
+    {
+        return $record->level->getValue() >= $this->minLevel->getValue();
+    }
+
+    public function addHandler(
+        LogHandler $handler,
+        ?LoggingLogLevel $level = null
+    ): HandlerAware {
+        $this->handlers[] = [
+            'handler' => $handler,
+            'level' => $level ?? $this->minLevel,
+        ];
+
+        return $this;
+    }
+
+    public function pushHandler(LogHandler $handler): HandlerAware
+    {
+        array_unshift($this->handlers, [
+            'handler' => $handler,
+            'level' => $this->minLevel,
+        ]);
+
+        return $this;
+    }
+
+    public function popHandler(): ?LogHandler
+    {
+        if (!empty($this->handlers)) {
+            return array_shift($this->handlers)['handler'];
+        }
+
+        return null;
+    }
+
+    public function getHandlers(): array
+    {
+        return array_column($this->handlers, 'handler');
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Logging\Formatter\ConsoleColorFormatter;
+use KaririCode\Logging\Formatter\LineFormatter;
+use KaririCode\Logging\LogLevel;
+
+class ConsoleHandler extends AbstractHandler
+{
+    private mixed $output;
+    private ConsoleColorFormatter $colorFormatter;
+
+    public function __construct(
+        LoggingLogLevel $minLevel = LogLevel::DEBUG,
+        private readonly bool $useColors = true,
+        LogFormatter $formatter = new LineFormatter()
+    ) {
+        parent::__construct($minLevel, $formatter);
+        $this->output = fopen('php://stdout', 'w');
+        $this->colorFormatter = new ConsoleColorFormatter();
+    }
+
+    public function handle(ImmutableValue $record): void
+    {
+        $message = $this->formatter->format($record);
+        if ($this->useColors) {
+            $message = $this->colorFormatter->format($record->level, $message);
+        }
+        fwrite($this->output, $message . PHP_EOL);
+    }
+
+    public function __destruct()
+    {
+        if (is_resource($this->output)) {
+            fclose($this->output);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\Logging\Logger;
+
+class ExceptionHandler
+{
+    public function __construct(private readonly Logger $logger)
+    {
+    }
+
+    public function handle(\Throwable $exception): void
+    {
+        $this->logger->error(
+            $exception->getMessage(),
+            [
+                'exception' => get_class($exception),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
+            ]
+        );
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+
+class FileHandler extends AbstractFileHandler
+{
+    public function handle(ImmutableValue $record): void
+    {
+        if ($record->level->value < $this->minLevel->value) {
+            return;
+        }
+
+        $this->writeToFile($record);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+
+class NullHandler extends AbstractHandler
+{
+    public function handle(ImmutableValue $record): void
+    {
+        // Do nothing
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogRotator;
+use KaririCode\Logging\Exception\LoggingException;
+use KaririCode\Logging\LogLevel;
+
+class RotatingFileHandler extends AbstractFileHandler
+{
+    private LogRotator $rotator;
+
+    public function __construct(
+        string $filePath,
+        LogRotator $rotator,
+        LogLevel $minLevel = LogLevel::DEBUG
+    ) {
+        parent::__construct($filePath, $minLevel);
+        $this->rotator = $rotator;
+    }
+
+    /**
+     * @throws LoggingException
+     */
+    public function handle(ImmutableValue $record): void
+    {
+        if (!$this->isHandling($record)) {
+            return;
+        }
+
+        try {
+            $this->rotateIfNecessary();
+            $this->writeToFile($record);
+        } catch (\Exception $e) {
+            throw new LoggingException('Error handling log record: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function rotateIfNecessary(): void
+    {
+        if ($this->rotator->shouldRotate($this->filePath)) {
+            $this->rotator->rotate($this->filePath);
+            $this->reopenFile();
+        }
+    }
+
+    private function reopenFile(): void
+    {
+        if (is_resource($this->fileHandle)) {
+            fclose($this->fileHandle);
+        }
+        $this->fileHandle = null;
+        $this->openFile();
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Logging\LogLevel;
+use KaririCode\Logging\Util\SlackClient;
+
+class SlackHandler extends AbstractHandler
+{
+    private SlackClient $slackClient;
+
+    public function __construct(
+        SlackClient $slackClient,
+        LoggingLogLevel $minLevel = LogLevel::CRITICAL,
+        ?LogFormatter $formatter = null
+    ) {
+        parent::__construct($minLevel, $formatter);
+        $this->slackClient = $slackClient;
+    }
+
+    public function handle(ImmutableValue $record): void
+    {
+        if (!$this->isHandling($record)) {
+            return;
+        }
+
+        $message = $this->formatter->format($record);
+        $this->slackClient->sendMessage($message);
+    }
+}
+
+
+<?php
+
+namespace KaririCode\Logging\Handler;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Logging\LogLevel;
+
+class SyslogUdpHandler extends AbstractHandler
+{
+    private \Socket|false $socket;
+
+    public function __construct(
+        private string $host,
+        private int $port,
+        LoggingLogLevel $minLevel = LogLevel::DEBUG
+    ) {
+        parent::__construct($minLevel);
+        $this->initializeSocket();
+    }
+
+    protected function createSocket(): \Socket|false
+    {
+        return \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    }
+
+    private function initializeSocket(): void
+    {
+        $this->socket = $this->createSocket();
+
+        if (false === $this->socket) {
+            $this->handleSocketError('Failed to create socket');
+        }
+    }
+
+    protected function sendToSocket(string $packet): bool
+    {
+        return \socket_sendto($this->socket, $packet, strlen($packet), 0, $this->host, $this->port);
+    }
+
+    public function handle(ImmutableValue $record): void
+    {
+        $message = $this->formatter->format($record);
+        $packet = '<' . $this->getSyslogPriority($record->level) . '>' . $message;
+
+        $sendResult = $this->sendToSocket($packet);
+        if (false === $sendResult) {
+            $this->handleSocketError('Socket sendto failed');
+        }
+    }
+
+    private function handleSocketError(string $message): void
+    {
+        $errorCode = \socket_last_error();
+        $errorMessage = \socket_strerror($errorCode);
+        \error_log("$message with error: $errorMessage");
+        throw new \RuntimeException(sprintf('%s: [%d] %s', $message, $errorCode, $errorMessage));
+    }
+
+    private function getSyslogPriority(LoggingLogLevel $level): int
+    {
+        $severityMap = [
+            LogLevel::DEBUG->value => 7,
+            LogLevel::INFO->value => 6,
+            LogLevel::NOTICE->value => 5,
+            LogLevel::WARNING->value => 4,
+            LogLevel::ERROR->value => 3,
+            LogLevel::CRITICAL->value => 2,
+            LogLevel::ALERT->value => 1,
+            LogLevel::EMERGENCY->value => 0,
+        ];
+
+        return 16 * 8 + $severityMap[$level->value] ?? 7; // 16 is the "local0" facility
+    }
+
+    public function __destruct()
+    {
+        if (is_resource($this->socket)) {
+            \socket_close($this->socket);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+
+enum LogLevel: string implements LoggingLogLevel
+{
+    case EMERGENCY = 'emergency';
+    case ALERT = 'alert';
+    case CRITICAL = 'critical';
+    case ERROR = 'error';
+    case WARNING = 'warning';
+    case NOTICE = 'notice';
+    case INFO = 'info';
+    case DEBUG = 'debug';
+
+    public function getLevel(): string
+    {
+        return $this->value;
+    }
+
+    public function getValue(): int
+    {
+        return match ($this) {
+            self::EMERGENCY => 800,
+            self::ALERT => 700,
+            self::CRITICAL => 600,
+            self::ERROR => 500,
+            self::WARNING => 400,
+            self::NOTICE => 300,
+            self::INFO => 200,
+            self::DEBUG => 100,
+        };
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogLevel;
+
+class LogRecord implements ImmutableValue
+{
+    public function __construct(
+        public readonly LogLevel $level,
+        public readonly string|\Stringable $message,
+        public readonly array $context = [],
+        public readonly \DateTimeImmutable $datetime = new \DateTimeImmutable(),
+        public readonly array $extra = []
+    ) {
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'level' => $this->level->value,
+            'message' => $this->message,
+            'context' => $this->context,
+            'datetime' => $this->datetime,
+            'extra' => $this->extra,
+        ];
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Contract\Logging\Structural\FormatterAware;
+use KaririCode\Contract\Logging\Structural\HandlerAware;
+use KaririCode\Contract\Logging\Structural\ProcessorAware;
+use KaririCode\Logging\Formatter\LineFormatter;
+
+class LoggerBuilder
+{
+    private string $name;
+    private array $handlers = [];
+    private array $processors = [];
+
+    public function __construct(
+        string $name,
+        private LogFormatter $formatter = new LineFormatter()
+    ) {
+        $this->name = $name;
+    }
+
+    public function withHandler(HandlerAware $handler): self
+    {
+        $this->handlers[] = $handler;
+
+        return $this;
+    }
+
+    public function withProcessor(ProcessorAware $processor): self
+    {
+        $this->processors[] = $processor;
+
+        return $this;
+    }
+
+    public function withFormatter(FormatterAware $formatter): self
+    {
+        $this->formatter = $formatter;
+
+        return $this;
+    }
+
+    public function build(): Logger
+    {
+        return new LoggerManager(
+            $this->name,
+            $this->handlers,
+            $this->processors,
+            $this->formatter
+        );
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Logging\Exception\LoggingException;
+
+class LoggerConfiguration
+{
+    private array $config = [];
+
+    public function set(string $key, mixed $value): void
+    {
+        $this->config[$key] = $value;
+    }
+
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return $this->config[$key] ?? $default;
+    }
+
+    public function load(string $path): void
+    {
+        if (!file_exists($path)) {
+            throw new LoggingException("Configuration file not found: {$path}");
+        }
+        $this->config = require $path;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Formatter\JsonFormatter;
+use KaririCode\Logging\Formatter\LineFormatter;
+use KaririCode\Logging\Handler\FileHandler;
+use KaririCode\Logging\Handler\SlackHandler;
+use KaririCode\Logging\Handler\SyslogUdpHandler;
+
+class LoggerFactory
+{
+    public static function createLogger(string $name, array $config): Logger
+    {
+        $handlers = [];
+        $processors = [];
+        $formatterClass = $config['formatter']['class'] ?? LineFormatter::class;
+        $formatter = new $formatterClass();
+
+        if (isset($config['path'])) {
+            $handlers[] = new FileHandler(
+                $config['path'],
+                LogLevel::from($config['level']->value ?? 'debug'),
+                $formatter
+            );
+        }
+
+        if (isset($config['url'])) {
+            $handlers[] = new SlackHandler($config['url'], LogLevel::from($config['level']->value ?? 'critical'), $formatter);
+        }
+
+        if (isset($config['handler'])) {
+            $handlerClass = $config['handler'];
+            if (SyslogUdpHandler::class === $handlerClass) {
+                $handlers[] = new $handlerClass(
+                    $config['handler_with']['host'] ?? null,
+                    (int) $config['handler_with']['port'] ?? 0
+                );
+            } else {
+                $handlerParams = $config['handler_with'] ?? [];
+                $handlers[] = new $handlerClass(...$handlerParams);
+            }
+        }
+
+        $processorsConfig = $config['processors'] ?? [];
+        foreach ($processorsConfig as $processorConfig) {
+            if (class_exists($processorConfig['class'])) {
+                $processors[] = new $processorConfig['class']();
+            }
+        }
+
+        return new LoggerManager($name, $handlers, $processors, $formatter);
+    }
+
+    public static function createQueryLogger(string $channel, int $threshold): Logger
+    {
+        $config = [
+            'channel' => $channel,
+            'threshold' => $threshold,
+            'formatter' => ['class' => JsonFormatter::class],
+        ];
+
+        return self::createLogger('query', $config);
+    }
+
+    public static function createPerformanceLogger(string $channel, int $threshold): Logger
+    {
+        $config = [
+            'channel' => $channel,
+            'threshold' => $threshold,
+            'formatter' => ['class' => JsonFormatter::class],
+        ];
+
+        return self::createLogger('performance', $config);
+    }
+
+    public static function createErrorLogger(string $channel, array $levels): Logger
+    {
+        $config = [
+            'channel' => $channel,
+            'levels' => $levels,
+            'formatter' => ['class' => LineFormatter::class],
+        ];
+
+        return self::createLogger('error', $config);
+    }
+
+    public static function createAsyncLogger(string $driver, int $batchSize): Logger
+    {
+        $config = [
+            'driver' => $driver,
+            'batch_size' => $batchSize,
+            'formatter' => ['class' => JsonFormatter::class],
+        ];
+
+        return self::createLogger('async', $config);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\LogFormatter;
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Contract\Logging\LogLevel;
+use KaririCode\Contract\Logging\Structural\HandlerAware;
+use KaririCode\Contract\Logging\Structural\ProcessorAware;
+use KaririCode\Logging\Formatter\LineFormatter;
+use KaririCode\Logging\Trait\LoggerTrait;
+
+class LoggerManager implements Logger
+{
+    use LoggerTrait;
+
+    public function __construct(
+        private readonly string $name,
+        private array $handlers = [],
+        private array $processors = [],
+        private LogFormatter $formatter = new LineFormatter()
+    ) {
+    }
+
+    public function log(LogLevel $level, string|\Stringable $message, array $context = []): void
+    {
+        $record = new LogRecord($level, $message, $context);
+
+        foreach ($this->processors as $processor) {
+            $record = $processor->process($record);
+        }
+
+        foreach ($this->handlers as $handler) {
+            $handler->handle($record);
+        }
+    }
+
+    public function addHandler(HandlerAware $handler): self
+    {
+        $this->handlers[] = $handler;
+
+        return $this;
+    }
+
+    public function addProcessor(ProcessorAware $processor): self
+    {
+        $this->processors[] = $processor;
+
+        return $this;
+    }
+
+    public function setFormatter(LogFormatter $formatter): self
+    {
+        $this->formatter = $formatter;
+
+        return $this;
+    }
+
+    /**
+     * @return HandlerInterface[]
+     */
+    public function getHandlers(): array
+    {
+        return $this->handlers;
+    }
+
+    /**
+     * @return ProcessorInterface[]
+     */
+    public function getProcessors(): array
+    {
+        return $this->processors;
+    }
+
+    public function getFormatter(): LogFormatter
+    {
+        return $this->formatter;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\Logger;
+
+class LoggerRegistry
+{
+    private static array $loggers = [];
+
+    public static function addLogger(string $name, Logger $logger): void
+    {
+        self::$loggers[$name] = $logger;
+    }
+
+    public static function getLogger(string $name): ?Logger
+    {
+        return self::$loggers[$name] ?? null;
+    }
+
+    public static function removeLogger(string $name): void
+    {
+        unset(self::$loggers[$name]);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Metric;
+
+class MetricsCollector
+{
+    private array $metrics = [];
+
+    public function increment(string $metric, int $value = 1): void
+    {
+        if (!isset($this->metrics[$metric])) {
+            $this->metrics[$metric] = 0;
+        }
+        $this->metrics[$metric] += $value;
+    }
+
+    public function gauge(string $metric, float $value): void
+    {
+        $this->metrics[$metric] = $value;
+    }
+
+    public function getMetrics(): array
+    {
+        return $this->metrics;
+    }
+
+    public function reset(): void
+    {
+        $this->metrics = [];
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Metric;
+
+class Monitor
+{
+    private array $metrics = [];
+
+    public function recordMetric(string $name, float $value): void
+    {
+        if (!isset($this->metrics[$name])) {
+            $this->metrics[$name] = [];
+        }
+        $this->metrics[$name][] = $value;
+    }
+
+    public function getMetrics(): array
+    {
+        return array_map(function ($values) {
+            return [
+                'count' => count($values),
+                'sum' => array_sum($values),
+                'avg' => array_sum($values) / count($values),
+                'min' => min($values),
+                'max' => max($values),
+            ];
+        }, $this->metrics);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Contract\Logging\LogProcessor;
+use KaririCode\Contract\Logging\Structural\ProcessorAware;
+
+abstract class AbstractProcessor implements ProcessorAware
+{
+    protected LogProcessor $processor;
+    private array $processors = [];
+
+    protected function hasValidContext(array $context): bool
+    {
+        return !empty($context['file']) || !empty($context['line']) || !empty($context['class']) || !empty($context['function']);
+    }
+
+    abstract public function process(ImmutableValue $record): ImmutableValue;
+
+    public function addProcessor(LogProcessor $processor): ProcessorAware
+    {
+        $this->processors[] = $processor;
+
+        return $this;
+    }
+
+    public function getProcessors(): array
+    {
+        return $this->processors;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\LogRecord;
+
+class AsyncLogProcessor
+{
+    private array $queue = [];
+    private ?\Fiber $processingFiber = null;
+
+    public function __construct(private Logger $logger, private int $batchSize = 10)
+    {
+    }
+
+    public function enqueue(LogRecord $record): void
+    {
+        $this->queue[] = $record;
+        $this->ensureProcessingStarted();
+    }
+
+    private function ensureProcessingStarted(): void
+    {
+        if (null === $this->processingFiber || $this->processingFiber->isTerminated()) {
+            $this->processingFiber = new \Fiber(function (): void {
+                while (!empty($this->queue)) {
+                    $batch = array_splice($this->queue, 0, $this->batchSize);
+                    foreach ($batch as $record) {
+                        $this->logger->log($record->level, $record->message, $record->context);
+                        \Fiber::suspend(); // Cooperatively yield control
+                    }
+                }
+            });
+            $this->processingFiber->start();
+        } elseif ($this->processingFiber->isSuspended()) {
+            $this->processingFiber->resume();
+        }
+    }
+
+    public function __destruct()
+    {
+        while (!empty($this->queue)) {
+            $this->ensureProcessingStarted();
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\ImmutableValue;
+
+class BulkProcessor
+{
+    private array $buffer = [];
+    private \Closure $flushCallback;
+
+    public function __construct(
+        private int $batchSize,
+        callable $flushCallback
+    ) {
+        $this->flushCallback = $flushCallback;
+    }
+
+    public function process(ImmutableValue $record): void
+    {
+        $this->buffer[] = $record;
+
+        if (count($this->buffer) >= $this->batchSize) {
+            $this->flush();
+        }
+    }
+
+    public function flush(): void
+    {
+        if (!empty($this->buffer)) {
+            call_user_func($this->flushCallback, $this->buffer);
+            $this->buffer = [];
+        }
+    }
+
+    public function __destruct()
+    {
+        $this->flush();
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Logging\LogRecord;
+
+class IntrospectionProcessor extends AbstractProcessor
+{
+    public function __construct(private int $stackDepth = 6)
+    {
+    }
+
+    public function process(ImmutableValue $record): ImmutableValue
+    {
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 7);
+
+        $context = [];
+
+        if (!empty($trace) && isset($trace[$this->stackDepth])) {
+            $frame = $trace[$this->stackDepth];
+            if ($this->hasValidContext($frame)) {
+                $context = array_merge(
+                    $record->context,
+                    $context = [
+                        'file' => $frame['file'],
+                        'line' => $frame['line'],
+                        'class' => $frame['class'],
+                        'function' => $frame['function'],
+                    ]
+                );
+            }
+        }
+
+        return new LogRecord(
+            $record->level,
+            $record->message,
+            $context
+        );
+    }
+}
+
+
+<?php
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Logging\LogRecord;
+
+class MemoryUsageProcessor extends AbstractProcessor
+{
+    public function process(ImmutableValue $record): ImmutableValue
+    {
+        $memoryUsage = memory_get_usage(true);
+        $memoryPeak = memory_get_peak_usage(true);
+
+        $context = array_merge($record->context, [
+            'memory_usage' => $this->formatBytes($memoryUsage),
+            'memory_peak' => $this->formatBytes($memoryPeak),
+        ]);
+
+        return new LogRecord(
+            $record->level,
+            $record->message,
+            $context,
+            $record->datetime,
+            $record->extra
+        );
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= (1 << (10 * $pow));
+
+        return round($bytes, 2) . ' ' . $units[$pow];
+    }
+}
+
+
+<?php
+
+namespace KaririCode\Logging\Processor;
+
+use KaririCode\Contract\ImmutableValue;
+use KaririCode\Logging\LogRecord;
+
+class WebProcessor extends AbstractProcessor
+{
+    public function process(ImmutableValue $record): ImmutableValue
+    {
+        $server = $_SERVER;
+        $context = array_merge($record->context, [
+            'url' => ($server['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' .
+                     ($server['HTTP_HOST'] ?? 'localhost') .
+                     ($server['REQUEST_URI'] ?? '/'),
+            'ip' => $server['REMOTE_ADDR'] ?? null,
+            'http_method' => $server['REQUEST_METHOD'] ?? null,
+            'server' => $server['SERVER_NAME'] ?? null,
+            'referrer' => $server['HTTP_REFERER'] ?? null,
+        ]);
+
+        return new LogRecord(
+            $record->level,
+            $record->message,
+            $context,
+            $record->datetime,
+            $record->extra
+        );
+    }
+}
+
+
+<?php
+
+namespace KaririCode\Logging;
+
+use KaririCode\Contract\Logging\Logger;
+
+class QueryLogger
+{
+    private Logger $logger;
+    private int $threshold;
+
+    public function __construct(Logger $logger, int $threshold)
+    {
+        $this->logger = $logger;
+        $this->threshold = $threshold;
+    }
+
+    public function log(string $query, array $bindings, float $time): void
+    {
+        if ($time >= $this->threshold) {
+            $this->logger->warning('Slow query detected', [
+                'query' => $query,
+                'bindings' => $bindings,
+                'time' => $time,
+            ]);
+        } else {
+            $this->logger->debug('Query executed', [
+                'query' => $query,
+                'bindings' => $bindings,
+                'time' => $time,
+            ]);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Resilience;
+
+class CircuitBreaker
+{
+    private int $failures = 0;
+    private int $successes = 0;
+    private bool $forcedOpen = false;
+    private ?\DateTime $lastFailureTime = null;
+
+    public function __construct(
+        private readonly int $failureThreshold = 5,
+        private readonly int $successThreshold = 2,
+        private readonly int $resetTimeout = 60
+    ) {
+    }
+
+    public function isOpen(): bool
+    {
+        if ($this->forcedOpen) {
+            return true;
+        }
+
+        if ($this->failures >= $this->failureThreshold) {
+            if (null === $this->lastFailureTime) {
+                return true;
+            }
+
+            $elapsedTime = time() - $this->lastFailureTime->getTimestamp();
+            if ($elapsedTime > $this->resetTimeout) {
+                $this->resetFailures();
+
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function recordFailure(): void
+    {
+        ++$this->failures;
+        $this->successes = 0;
+        $this->lastFailureTime = new \DateTime();
+    }
+
+    public function recordSuccess(): void
+    {
+        if (!$this->forcedOpen) {
+            ++$this->successes;
+            if ($this->successes >= $this->successThreshold) {
+                $this->resetFailures();
+            }
+        }
+    }
+
+    private function resetFailures(): void
+    {
+        $this->failures = 0;
+        $this->successes = 0;
+        $this->lastFailureTime = null;
+    }
+
+    public function forceOpen(): void
+    {
+        $this->forcedOpen = true;
+    }
+
+    public function forceClose(): void
+    {
+        $this->forcedOpen = false;
+        $this->resetFailures();
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Resilience;
+
+class Fallback
+{
+    public function execute(callable $primaryOperation, ?callable $fallbackOperation = null): mixed
+    {
+        $primary = \Closure::fromCallable($primaryOperation);
+        $fallback = $fallbackOperation ? \Closure::fromCallable($fallbackOperation) : null;
+
+        try {
+            return $primary();
+        } catch (\Throwable $e) {
+            if (is_null($fallback)) {
+                throw $e;
+            }
+
+            return $fallback($e);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Resilience;
+
+use KaririCode\Logging\LogRecord;
+
+class RateLimiter
+{
+    private array $buckets = [];
+
+    public function __construct(
+        private readonly int $limit,
+        private readonly int $interval
+    ) {
+    }
+
+    public function allow(LogRecord $record): bool
+    {
+        $key = $record->level->value . $record->message;
+        $now = time();
+
+        if (!isset($this->buckets[$key])) {
+            $this->buckets[$key] = ['count' => 0, 'reset' => $now + $this->interval];
+        }
+
+        if ($now >= $this->buckets[$key]['reset']) {
+            $this->buckets[$key] = ['count' => 0, 'reset' => $now + $this->interval];
+        }
+
+        if ($this->buckets[$key]['count'] < $this->limit) {
+            ++$this->buckets[$key]['count'];
+
+            return true;
+        }
+
+        return false;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Resilience;
+
+class Retry
+{
+    public function __construct(
+        private readonly int $maxAttempts = 3,
+        private readonly int $delay = 1000,
+        private readonly int $multiplier = 1,
+        private readonly int $jitter = 0
+    ) {
+    }
+
+    public function execute(callable $operation): mixed
+    {
+        $attempts = 0;
+        $lastException = null;
+        $currentDelay = $this->delay;
+
+        while ($attempts < $this->maxAttempts) {
+            try {
+                return $operation();
+            } catch (\Exception $e) {
+                $lastException = $e;
+                ++$attempts;
+                if ($attempts < $this->maxAttempts) {
+                    $jitterValue = random_int(0, $this->jitter);
+                    usleep(($currentDelay + $jitterValue) * 1000);
+                    $currentDelay *= $this->multiplier;
+                }
+            }
+        }
+
+        throw $lastException;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Rotator;
+
+use KaririCode\Contract\Logging\LogRotator;
+
+class SizeBasedRotator implements LogRotator
+{
+    public function __construct(
+        private int $maxFiles = 5,
+        private int $maxFileSize = 5 * 1024 * 1024
+    ) {
+    }
+
+    public function shouldRotate(string $filePath): bool
+    {
+        return file_exists($filePath) && filesize($filePath) >= $this->maxFileSize;
+    }
+
+    public function rotate(string $filePath): void
+    {
+        for ($i = $this->maxFiles - 1; $i > 0; --$i) {
+            $source = "{$filePath}." . ($i - 1);
+            $target = "{$filePath}.{$i}";
+            if (file_exists($source)) {
+                $this->safeRename($source, $target);
+            }
+        }
+
+        if (file_exists($filePath)) {
+            $this->safeRename($filePath, "{$filePath}.1");
+        }
+    }
+
+    private function safeRename(string $source, string $target): void
+    {
+        if (!rename($source, $target)) {
+            throw new \RuntimeException("Failed to rotate log file from {$source} to {$target}");
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Security;
+
+class Anonymizer
+{
+    private array $patterns = [
+        'email' => '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/',
+        'ip' => '/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/',
+        'credit_card' => '/\b(?:\d{4}[-\s]?){3}\d{4}\b/',
+    ];
+
+    public function anonymize(string $message): string
+    {
+        foreach ($this->patterns as $type => $pattern) {
+            $message = preg_replace_callback($pattern, function ($match) use ($type) {
+                return $this->mask($match[0], $type);
+            }, $message);
+        }
+
+        return $message;
+    }
+
+    private function mask(string $value, string $type): string
+    {
+        switch ($type) {
+            case 'email':
+                [$username, $domain] = explode('@', $value);
+                $maskedUsername = substr($username, 0, 2) . str_repeat('*', strlen($username) - 2);
+
+                return $maskedUsername . '@' . $domain;
+            case 'ip':
+                return preg_replace('/\d/', '*', $value);
+            case 'credit_card':
+                $cleanNumber = preg_replace('/[^0-9]/', '', $value);
+                $masked = str_repeat('*', strlen($cleanNumber) - 4) . substr($cleanNumber, -4);
+
+                return preg_replace('/(.{4})/', '$1-', substr($masked, 0, -4)) . substr($masked, -4);
+
+            default:
+                return preg_replace('/\S/', '*', $value);
+        }
+    }
+
+    public function addPattern(string $name, string $pattern): void
+    {
+        // Validate the pattern before adding it
+        if ($this->isInvalidRegex($pattern)) {
+            throw new \InvalidArgumentException('Invalid regex pattern for type: invalid');
+        }
+
+        $this->patterns[$name] = $pattern;
+    }
+
+    public function removePattern(string $name): void
+    {
+        unset($this->patterns[$name]);
+    }
+
+    private function isInvalidRegex(string $pattern): bool
+    {
+        return false === @preg_match($pattern, '');
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Security;
+
+class Encryptor
+{
+    public function __construct(private readonly string $key)
+    {
+        if (32 !== strlen($key)) {
+            throw new \InvalidArgumentException('Key must be exactly 32 bytes long');
+        }
+    }
+
+    public function encrypt(string $data): string
+    {
+        $iv = random_bytes(16);
+        $encrypted = openssl_encrypt($data, 'AES-256-CBC', $this->key, OPENSSL_RAW_DATA, $iv);
+        if (false === $encrypted) {
+            throw new \RuntimeException('Encryption failed: ' . openssl_error_string());
+        }
+
+        return base64_encode($iv . $encrypted);
+    }
+
+    public function decrypt(string $data): string
+    {
+        $decoded = base64_decode($data, true);
+        if (false === $decoded) {
+            throw new \InvalidArgumentException('Invalid base64 encoding');
+        }
+        $iv = substr($decoded, 0, 16);
+        $encrypted = substr($decoded, 16);
+        $decrypted = openssl_decrypt($encrypted, 'AES-256-CBC', $this->key, OPENSSL_RAW_DATA, $iv);
+        if (false === $decrypted) {
+            throw new \RuntimeException('Decryption failed: ' . openssl_error_string());
+        }
+
+        return $decrypted;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Security;
+
+interface Mutex
+{
+    public function lock(): void;
+
+    public function unlock(): void;
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Security;
+
+class SimpleMutex implements Mutex
+{
+    private bool $locked = false;
+
+    public function lock(): void
+    {
+        while ($this->locked) {
+            usleep(100);
+        }
+        $this->locked = true;
+    }
+
+    public function unlock(): void
+    {
+        $this->locked = false;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Security;
+
+class ThreadSafe
+{
+    public function __construct(private Mutex $mutex)
+    {
+    }
+
+    public function synchronize(callable $callback): mixed
+    {
+        $this->mutex->lock();
+        try {
+            return $callback();
+        } finally {
+            $this->mutex->unlock();
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Service;
+
+use KaririCode\Logging\Decorator\AsyncLogger;
+use KaririCode\Logging\LoggerConfiguration;
+use KaririCode\Logging\LoggerFactory;
+use KaririCode\Logging\LoggerRegistry;
+use KaririCode\Logging\LogLevel;
+
+class LoggerServiceProvider
+{
+    public function register(LoggerConfiguration $config): void
+    {
+        $defaultChannel = $config->get('default');
+        $channelsConfig = $config->get('channels', []);
+
+        foreach ($channelsConfig as $channelName => $channelConfig) {
+            $logger = LoggerFactory::createLogger($channelName, $channelConfig);
+            LoggerRegistry::addLogger($channelName, $logger);
+
+            if ($channelName === $defaultChannel) {
+                LoggerRegistry::addLogger('default', $logger);
+            }
+        }
+
+        // Register emergency logger
+        $emergencyLoggerConfig = $config->get('emergency_logger', []);
+        $emergencyLogger = LoggerFactory::createLogger('emergency', $emergencyLoggerConfig);
+        LoggerRegistry::addLogger('emergency', $emergencyLogger);
+
+        // Register query logger
+        if ($config->get('query_logger.enabled', false)) {
+            $queryLogger = LoggerFactory::createQueryLogger(
+                'query',
+                $config->get('query_logger.threshold', 100)
+            );
+            LoggerRegistry::addLogger('query', $queryLogger);
+        }
+
+        // Register performance logger
+        if ($config->get('performance_logger.enabled', false)) {
+            $performanceLogger = LoggerFactory::createPerformanceLogger(
+                'performance',
+                $config->get('performance_logger.threshold', 1000)
+            );
+            LoggerRegistry::addLogger('performance', $performanceLogger);
+        }
+
+        // Register error logger
+        if ($config->get('error_logger.enabled', true)) {
+            $errorLogger = LoggerFactory::createErrorLogger(
+                'error',
+                $config->get('error_logger.levels', [
+                    LogLevel::ERROR,
+                    LogLevel::CRITICAL,
+                    LogLevel::ALERT,
+                    LogLevel::EMERGENCY,
+                ])
+            );
+            LoggerRegistry::addLogger('error', $errorLogger);
+        }
+
+        // Register async logger if enabled
+        if ($config->get('async.enabled', true)) {
+            $asyncLogger = LoggerFactory::createAsyncLogger(
+                $config->get('async.driver', AsyncLogger::class),
+                $config->get('async.batch_size', 10)
+            );
+            LoggerRegistry::addLogger('async', $asyncLogger);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Tracing;
+
+class DistributedTracing
+{
+    private string $traceId;
+    private string $spanId;
+
+    public function __construct()
+    {
+        $this->traceId = bin2hex(random_bytes(16));
+        $this->spanId = bin2hex(random_bytes(8));
+    }
+
+    public function getTraceId(): string
+    {
+        return $this->traceId;
+    }
+
+    public function getSpanId(): string
+    {
+        return $this->spanId;
+    }
+
+    public function createChildSpan(): self
+    {
+        $child = new self();
+        $child->traceId = $this->traceId;
+
+        return $child;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Trait;
+
+use KaririCode\Contract\Logging\Logger;
+
+trait LoggerAwareTrait
+{
+    protected Logger $logger;
+
+    public function setLogger(Logger $logger): void
+    {
+        $this->logger = $logger;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Trait;
+
+use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
+use KaririCode\Logging\LogLevel;
+
+trait LoggerTrait
+{
+    public function emergency(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::EMERGENCY, $message, $context);
+    }
+
+    public function alert(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::ALERT, $message, $context);
+    }
+
+    public function critical(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::CRITICAL, $message, $context);
+    }
+
+    public function error(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::ERROR, $message, $context);
+    }
+
+    public function warning(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::WARNING, $message, $context);
+    }
+
+    public function notice(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::NOTICE, $message, $context);
+    }
+
+    public function info(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::INFO, $message, $context);
+    }
+
+    public function debug(\Stringable|string $message, array $context = []): void
+    {
+        $this->log(LogLevel::DEBUG, $message, $context);
+    }
+
+    abstract public function log(LoggingLogLevel $level, \Stringable|string $message, array $context = []): void;
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+use Composer\Script\Event;
+
+class AssetPublisher
+{
+    public static function publishAssets(Event $event): void
+    {
+        $vendorDir = $event->getComposer()->getConfig()->get('vendor-dir');
+        $sourceDir = $vendorDir . '/kariricode/logging/resources';
+        $targetDir = dirname($vendorDir) . '/resources/logging';
+
+        if (!is_dir($sourceDir)) {
+            $event->getIO()->write('<error>Source directory not found: ' . $sourceDir . '</error>');
+
+            return;
+        }
+
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $targetDir));
+        }
+
+        /** @var RecursiveDirectoryIterator $iterator */
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($sourceDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $subPathName = $iterator->getSubPathName();
+            if ($item->isDir()) {
+                $targetPath = $targetDir . DIRECTORY_SEPARATOR . $subPathName;
+                if (!is_dir($targetPath) && !@mkdir($targetPath, 0755, true) && !is_dir($targetPath)) {
+                    throw new \RuntimeException(sprintf('Directory "%s" was not created', $targetPath));
+                }
+            } else {
+                $targetPath = $targetDir . DIRECTORY_SEPARATOR . $subPathName;
+                if (!copy($item->getPathname(), $targetPath)) {
+                    throw new \RuntimeException(sprintf('Failed to copy "%s" to "%s"', $item->getPathname(), $targetPath));
+                }
+            }
+        }
+
+        $event->getIO()->write('<info>Published assets to: ' . $targetDir . '</info>');
+    }
+}
+
+
+<?php
+
+namespace KaririCode\Logging\Util;
+
+use Composer\Installer\PackageEvent;
+use Composer\Script\Event;
+
+class ComposerScripts
+{
+    public static function postPackageInstall(PackageEvent $event)
+    {
+        /** @var InstallOperation|UpdateOperation $operation */
+        $operation = $event->getOperation();
+        $package = method_exists($operation, 'getPackage')
+        ? $operation->getPackage()
+        : $operation->getInitialPackage();
+
+        if ('kariricode/logging' === $package->getName()) {
+            /** @var Event $event */
+            ConfigGenerator::generateConfig($event);
+            AssetPublisher::publishAssets($event);
+        }
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+use Composer\Script\Event;
+
+class ConfigGenerator
+{
+    public static function generateConfig(Event $event): void
+    {
+        $vendorDir = $event->getComposer()->getConfig()->get('vendor-dir');
+        $projectRoot = dirname($vendorDir);
+        $configDir = $projectRoot . '/config';
+        $configFile = $configDir . '/logging.php';
+
+        if (!is_dir($configDir) && !mkdir($configDir, 0755, true) && !is_dir($configDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $configDir));
+        }
+
+        if (!file_exists($configFile)) {
+            $configContent = self::getConfigContent();
+            if (false === file_put_contents($configFile, $configContent)) {
+                throw new \RuntimeException(sprintf('Failed to write config file: %s', $configFile));
+            }
+            $event->getIO()->write('<info>Created config file: ' . $configFile . '</info>');
+        } else {
+            $event->getIO()->write('<info>Config file already exists: ' . $configFile . '</info>');
+        }
+    }
+
+    private static function getConfigContent(): string
+    {
+        return <<<'EOT'
+<?php
+
+use KaririCode\Logging\LogLevel;
+use KaririCode\Logging\Util\ConfigHelper;
+
+return [
+    'default' => ConfigHelper::env('LOG_CHANNEL', 'single'),
+
+    'channels' => [
+        'stack' => [
+            'driver' => 'stack',
+            'channels' => ['daily', 'slack'],
+            'ignore_exceptions' => false,
+        ],
+
+        'single' => [
+            'driver' => 'single',
+            'path' => ConfigHelper::storagePath('logs/logging.log'),
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'bubble' => true,
+            'permission' => 0664,
+            'locking' => false,
+        ],
+
+        'daily' => [
+            'driver' => 'daily',
+            'path' => ConfigHelper::storagePath('logs/logging.log'),
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'bubble' => true,
+            'permission' => 0664,
+            'locking' => false,
+        ],
+
+        'slack' => [
+            'driver' => 'slack',
+            'url' => ConfigHelper::env('LOG_SLACK_WEBHOOK_URL'),
+            'username' => 'KaririCode Log',
+            'emoji' => ':boom:',
+            'level' => ConfigHelper::env('LOG_LEVEL', 'critical'),
+            'bubble' => true,
+            'context' => ['from' => 'KaririCode'],
+            'channels' => ['alerts'],
+        ],
+
+        'papertrail' => [
+            'driver' => 'monolog',
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'handler' => \KaririCode\Logging\Handler\SyslogUdpHandler::class,
+            'handler_with' => [
+                'host' => ConfigHelper::env('PAPERTRAIL_URL'),
+                'port' => ConfigHelper::env('PAPERTRAIL_PORT')
+            ],
+        ],
+
+        'stderr' => [
+            'driver' => 'monolog',
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'handler' => \KaririCode\Logging\Handler\ConsoleHandler::class,
+            'formatter' => ConfigHelper::env('LOG_STDERR_FORMATTER'),
+            'with' => [
+                'stream' => 'php://stderr',
+            ],
+        ],
+
+        'syslog' => [
+            'driver' => 'syslog',
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'facility' => LOG_USER,
+            'bubble' => true,
+        ],
+
+        'errorlog' => [
+            'driver' => 'errorlog',
+            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
+            'message_type' => 0,
+        ],
+
+        'null' => [
+            'driver' => 'monolog',
+            'handler' => \KaririCode\Logging\Handler\NullHandler::class,
+        ],
+
+        'emergency' => [
+            'path' => ConfigHelper::storagePath('logs/emergency.log'),
+            'level' =>  LogLevel::EMERGENCY,
+        ],
+    ],
+
+    'processors' => [
+        'introspection' => [
+            'class' => \KaririCode\Logging\Processor\IntrospectionProcessor::class,
+            'level' => LogLevel::DEBUG,
+        ],
+        'memory_usage' => [
+            'class' => \KaririCode\Logging\Processor\MemoryUsageProcessor::class,
+            'level' => LogLevel::DEBUG,
+        ],
+        'web_processor' => [
+            'class' => \KaririCode\Logging\Processor\WebProcessor::class,
+            'level' => LogLevel::INFO,
+        ],
+    ],
+
+    'formatters' => [
+        'default' => [
+            'class' => \KaririCode\Logging\Formatter\LineFormatter::class,
+            'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+            'date_format' => 'Y-m-d H:i:s',
+            'colors' => true,
+            'multiline' => true,
+        ],
+        'json' => [
+            'class' => \KaririCode\Logging\Formatter\JsonFormatter::class,
+            'include_stacktraces' => true,
+        ],
+        'elastic' => [
+            'class' => \KaririCode\Logging\Formatter\ElasticFormatter::class,
+            'index' => ConfigHelper::env('ELASTIC_LOG_INDEX', 'logging-logs'),
+        ],
+    ],
+
+    'async' => [
+        'enabled' => ConfigHelper::env('ASYNC_LOG_ENABLED', true),
+        'driver' => \KaririCode\Logging\Decorator\AsyncLogger::class,
+        'batch_size' => 10, // Process logs in batches of 10
+    ],
+
+    'emergency_logger' => [
+        'path' => ConfigHelper::storagePath('logs/emergency.log'),
+        'level' => LogLevel::EMERGENCY,
+    ],
+
+    'query_logger' => [
+        'enabled' => ConfigHelper::env('QUERY_LOG_ENABLED', false),
+        'channel' => ConfigHelper::env('QUERY_LOG_CHANNEL', 'daily'),
+        'threshold' => ConfigHelper::env('QUERY_LOG_THRESHOLD', 100), // in milliseconds
+    ],
+
+    'performance_logger' => [
+        'enabled' => ConfigHelper::env('PERFORMANCE_LOG_ENABLED', false),
+        'channel' => ConfigHelper::env('PERFORMANCE_LOG_CHANNEL', 'daily'),
+        'threshold' => ConfigHelper::env('PERFORMANCE_LOG_THRESHOLD', 1000), // in milliseconds
+    ],
+
+    'error_logger' => [
+        'enabled' => ConfigHelper::env('ERROR_LOG_ENABLED', true),
+        'channel' => ConfigHelper::env('ERROR_LOG_CHANNEL', 'daily'),
+        'levels' => [LogLevel::ERROR, LogLevel::CRITICAL, LogLevel::ALERT, LogLevel::EMERGENCY],
+    ],
+
+    'log_cleaner' => [
+        'enabled' => ConfigHelper::env('LOG_CLEANER_ENABLED', true),
+        'keep_days' => ConfigHelper::env('LOG_CLEANER_KEEP_DAYS', 30),
+        'channels' => ['single', 'daily'],
+    ],
+];
+EOT;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+class ConfigHelper
+{
+    /**
+     * Carrega o arquivo .env se existir.
+     */
+    public static function loadEnv(): void
+    {
+        $rootPath = self::findRootPath();
+        if (file_exists($rootPath . '/.env')) {
+            $lines = file($rootPath . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (0 === strpos(trim($line), '#')) {
+                    continue;
+                }
+                list($name, $value) = explode('=', $line, 2);
+                putenv(trim($name) . '=' . trim($value));
+            }
+        }
+    }
+
+    /**
+     * Retorna o valor de uma variável de ambiente ou um valor padrão.
+     */
+    public static function env(string $key, $default = null)
+    {
+        $value = getenv($key);
+        if (false === $value) {
+            return $default;
+        }
+
+        switch (strtolower($value)) {
+            case 'true':
+            case '(true)':
+                return true;
+            case 'false':
+            case '(false)':
+                return false;
+            case 'empty':
+            case '(empty)':
+                return '';
+            case 'null':
+            case '(null)':
+                return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Retorna o caminho do diretório de armazenamento de logs.
+     */
+    public static function storagePath(string $path = ''): string
+    {
+        $rootPath = self::findRootPath();
+
+        return $rootPath . '/storage' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+
+    /**
+     * Encontra a raiz do projeto subindo os diretórios até encontrar o .env.
+     */
+    public static function findRootPath(): string
+    {
+        $dir = __DIR__;
+        while (!file_exists($dir . '/.env') && '/' !== $dir) {
+            $dir = dirname($dir);
+        }
+
+        if (file_exists($dir . '/.env')) {
+            return $dir;
+        }
+
+        throw new \RuntimeException('Root path with .env file not found.');
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+class ContextPropagator
+{
+    private static array $context = [];
+
+    public static function set(string $key, mixed $value): void
+    {
+        self::$context[$key] = $value;
+    }
+
+    public static function get(string $key): mixed
+    {
+        return self::$context[$key] ?? null;
+    }
+
+    public static function remove(string $key): void
+    {
+        unset(self::$context[$key]);
+    }
+
+    public static function clear(): void
+    {
+        self::$context = [];
+    }
+
+    public static function all(): array
+    {
+        return self::$context;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+class CurlClient
+{
+    private const TIMEOUT = 30;
+    private const DEFAULT_HEADERS = ['Content-Type: application/json'];
+
+    public function post(string $url, array $data, array $headers = []): array
+    {
+        $ch = $this->initializeCurl($url);
+        $this->setPostOptions($ch, $data, $headers);
+
+        $response = $this->executeRequest($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        curl_close($ch);
+
+        return [
+            'status' => $httpCode,
+            'body' => $response,
+        ];
+    }
+
+    /**
+     * Initialize a new cURL session.
+     *
+     * @param string $url the URL to initialize the cURL session with
+     *
+     * @throws \RuntimeException if cURL initialization fails
+     *
+     * @return \CurlHandle the cURL handle
+     */
+    private function initializeCurl(string $url): \CurlHandle
+    {
+        $ch = curl_init($url);
+        if (false === $ch) {
+            throw new \RuntimeException('Failed to initialize cURL');
+        }
+
+        return $ch;
+    }
+
+    /**
+     * Set POST options for the cURL session.
+     *
+     * @param \CurlHandle $ch the cURL handle
+     * @param array $data the data to be sent in the request body
+     * @param array $headers additional headers to be sent with the request
+     *
+     * @throws \JsonException if there's an error encoding the data
+     */
+    private function setPostOptions(\CurlHandle $ch, array $data, array $headers): void
+    {
+        try {
+            $payload = json_encode($data, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new \JsonException('Failed to encode data: ' . $e->getMessage(), $e->getCode(), $e);
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => array_merge(self::DEFAULT_HEADERS, $headers),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => self::TIMEOUT,
+        ]);
+    }
+
+    /**
+     * Execute the cURL request.
+     *
+     * @param \CurlHandle $ch the cURL handle
+     *
+     * @throws \RuntimeException if the request fails
+     *
+     * @return string the response body
+     */
+    private function executeRequest(\CurlHandle $ch): string
+    {
+        $response = curl_exec($ch);
+        if (false === $response) {
+            $error = curl_error($ch);
+            throw new \RuntimeException('Failed to send request: ' . $error);
+        }
+
+        return $response;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+class Sampler
+{
+    public function __construct(private readonly float $sampleRate)
+    {
+        if ($sampleRate <= 0 || $sampleRate > 1) {
+            throw new \InvalidArgumentException('Sample rate must be between 0 and 1');
+        }
+    }
+
+    public function shouldSample(): bool
+    {
+        return (mt_rand() / mt_getrandmax()) <= $this->sampleRate;
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+class Serializer
+{
+    public function serialize(mixed $data): string
+    {
+        return serialize($data);
+    }
+
+    public function unserialize(string $data): mixed
+    {
+        return unserialize($data);
+    }
+
+    public function jsonSerialize(mixed $data): string
+    {
+        return json_encode($data, JSON_THROW_ON_ERROR);
+    }
+
+    public function jsonUnserialize(string $data): mixed
+    {
+        return json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+    }
+}
+
+
+<?php
+
+declare(strict_types=1);
+
+namespace KaririCode\Logging\Util;
+
+use KaririCode\Logging\Exception\LoggingException;
+use KaririCode\Logging\Resilience\CircuitBreaker;
+use KaririCode\Logging\Resilience\Fallback;
+use KaririCode\Logging\Resilience\Retry;
+
+class SlackClient
+{
+    private readonly string $webhookUrl;
+    private readonly CircuitBreaker $circuitBreaker;
+    private readonly Retry $retry;
+    private readonly Fallback $fallback;
+    private readonly CurlClient $curlClient;
+
+    public function __construct(
+        string $webhookUrl,
+        CircuitBreaker $circuitBreaker,
+        Retry $retry,
+        Fallback $fallback,
+        CurlClient $curlClient
+    ) {
+        $this->setWebhookUrl($webhookUrl);
+        $this->circuitBreaker = $circuitBreaker;
+        $this->retry = $retry;
+        $this->fallback = $fallback;
+        $this->curlClient = $curlClient;
+    }
+
+    public static function create(
+        string $webhookUrl,
+        ?CircuitBreaker $circuitBreaker = null,
+        ?Retry $retry = null,
+        ?Fallback $fallback = null,
+        ?CurlClient $curlClient = null
+    ): self {
+        return new self(
+            $webhookUrl,
+            $circuitBreaker ?? new CircuitBreaker(3, 60),
+            $retry ?? new Retry(3, 1000, 2, 100),
+            $fallback ?? new Fallback(),
+            $curlClient ?? new CurlClient()
+        );
+    }
+
+    public function sendMessage(string $message): void
+    {
+        $this->fallback->execute(
+            primaryOperation: function () use ($message) {
+                if ($this->circuitBreaker->isOpen()) {
+                    throw new LoggingException('Circuit is open, not sending message to Slack');
+                }
+
+                $this->retry->execute(function () use ($message) {
+                    $this->doSendMessage($message);
+                });
+            },
+            fallbackOperation: function (\Throwable $e) {
+                // Fallback operation, e.g., log to a local file
+                error_log('Failed to send message to Slack: ' . $e->getMessage());
+            }
+        );
+    }
+
+    private function doSendMessage(string $message): void
+    {
+        $payload = $this->createPayload($message);
+        $response = $this->sendRequest($payload);
+        $this->handleResponse($response);
+    }
+
+    private function createPayload(string $message): array
+    {
+        return ['text' => $message];
+    }
+
+    private function sendRequest(array $payload): array
+    {
+        try {
+            return $this->curlClient->post($this->webhookUrl, $payload);
+        } catch (\JsonException $e) {
+            $this->circuitBreaker->recordFailure();
+            throw new LoggingException('Failed to encode message for Slack: ' . $e->getMessage(), 0, $e);
+        } catch (\RuntimeException $e) {
+            $this->circuitBreaker->recordFailure();
+            throw new LoggingException('Failed to send message to Slack: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    private function handleResponse(array $response): void
+    {
+        $httpCode = $response['status'];
+        $responseBody = $response['body'];
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $this->circuitBreaker->recordFailure();
+            throw new LoggingException('Slack API responded with HTTP code ' . $httpCode . ': ' . $responseBody);
+        }
+
+        $this->circuitBreaker->recordSuccess();
+    }
+
+    private function setWebhookUrl(string $webhookUrl): void
+    {
+        if (false === filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+            throw new \InvalidArgumentException('Invalid webhook URL');
+        }
+        $this->webhookUrl = $webhookUrl;
+    }
+
+    public function getWebhookUrl(): string
+    {
+        return $this->webhookUrl;
+    }
+}
+
+

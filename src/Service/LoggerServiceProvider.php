@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace KaririCode\Logging\Service;
 
-use KaririCode\Logging\Decorator\AsyncLogger;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
-use KaririCode\Logging\LogLevel;
 
 class LoggerServiceProvider
 {
@@ -33,41 +31,30 @@ class LoggerServiceProvider
 
         // Register query logger
         if ($config->get('query_logger.enabled', false)) {
-            $queryLogger = LoggerFactory::createQueryLogger(
-                'query',
-                $config->get('query_logger.threshold', 100)
-            );
+            $queryLoggerConfig = $config->get('query_logger', []);
+            $queryLogger = LoggerFactory::createQueryLogger($queryLoggerConfig);
             LoggerRegistry::addLogger('query', $queryLogger);
         }
 
         // Register performance logger
         if ($config->get('performance_logger.enabled', false)) {
-            $performanceLogger = LoggerFactory::createPerformanceLogger(
-                'performance',
-                $config->get('performance_logger.threshold', 1000)
-            );
+            $performanceLoggerConfig = $config->get('performance_logger', []);
+            $performanceLogger = LoggerFactory::createPerformanceLogger($performanceLoggerConfig);
             LoggerRegistry::addLogger('performance', $performanceLogger);
         }
 
         // Register error logger
         if ($config->get('error_logger.enabled', true)) {
-            $errorLogger = LoggerFactory::createErrorLogger(
-                'error',
-                $config->get('error_logger.levels', [
-                    LogLevel::ERROR,
-                    LogLevel::CRITICAL,
-                    LogLevel::ALERT,
-                    LogLevel::EMERGENCY,
-                ])
-            );
+            $errorLoggerConfig = $config->get('error_logger', []);
+            $errorLogger = LoggerFactory::createErrorLogger($errorLoggerConfig);
             LoggerRegistry::addLogger('error', $errorLogger);
         }
 
         // Register async logger if enabled
         if ($config->get('async.enabled', true)) {
             $asyncLogger = LoggerFactory::createAsyncLogger(
-                $config->get('async.driver', AsyncLogger::class),
-                $config->get('async.batch_size', 10)
+                LoggerRegistry::getLogger('default'),
+                (int) $config->get('async.batch_size', 10)
             );
             LoggerRegistry::addLogger('async', $asyncLogger);
         }

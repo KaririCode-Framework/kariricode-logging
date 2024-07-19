@@ -4,78 +4,71 @@ declare(strict_types=1);
 
 namespace KaririCode\Logging\Util;
 
+use KaririCode\Logging\Util\ConfigLoader\EnvLoader;
+use KaririCode\Logging\Util\ConfigLoader\EnvParser;
+
 class ConfigHelper
 {
-    /**
-     * Carrega o arquivo .env se existir.
-     */
+    private static ?EnvLoader $envLoader = null;
+    private static ?EnvParser $envParser = null;
+
     public static function loadEnv(): void
     {
-        $rootPath = self::findRootPath();
-        if (file_exists($rootPath . '/.env')) {
-            $lines = file($rootPath . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                if (0 === strpos(trim($line), '#')) {
-                    continue;
-                }
-                list($name, $value) = explode('=', $line, 2);
-                putenv(trim($name) . '=' . trim($value));
-            }
-        }
+        self::getEnvLoader()->load();
     }
 
-    /**
-     * Retorna o valor de uma variável de ambiente ou um valor padrão.
-     */
-    public static function env(string $key, $default = null)
+    public static function env(string $key, mixed $default = null): mixed
     {
         $value = getenv($key);
         if (false === $value) {
             return $default;
         }
 
-        switch (strtolower($value)) {
-            case 'true':
-            case '(true)':
-                return true;
-            case 'false':
-            case '(false)':
-                return false;
-            case 'empty':
-            case '(empty)':
-                return '';
-            case 'null':
-            case '(null)':
-                return null;
-        }
-
-        return $value;
+        return self::getEnvParser()->parse($value);
     }
 
-    /**
-     * Retorna o caminho do diretório de armazenamento de logs.
-     */
     public static function storagePath(string $path = ''): string
     {
-        $rootPath = self::findRootPath();
+        $rootPath = self::getEnvLoader()->findRootPath();
 
-        return $rootPath . '/storage' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+        return $rootPath . DIRECTORY_SEPARATOR . 'storage' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
 
-    /**
-     * Encontra a raiz do projeto subindo os diretórios até encontrar o .env.
-     */
-    public static function findRootPath(): string
+    public static function parseIntValue(string $value): int
     {
-        $dir = __DIR__;
-        while (!file_exists($dir . '/.env') && '/' !== $dir) {
-            $dir = dirname($dir);
+        return self::getEnvParser()->parseIntValue($value);
+    }
+
+    public static function parseFloatValue(string $value): float
+    {
+        return self::getEnvParser()->parseFloatValue($value);
+    }
+
+    public static function parseBooleanValue(string $value): bool
+    {
+        return self::getEnvParser()->parseBooleanValue($value);
+    }
+
+    public static function parseStringValue(string $value): string
+    {
+        return self::getEnvParser()->parseStringValue($value);
+    }
+
+    private static function getEnvLoader(): EnvLoader
+    {
+        if (null === self::$envLoader) {
+            self::$envLoader = new EnvLoader();
         }
 
-        if (file_exists($dir . '/.env')) {
-            return $dir;
+        return self::$envLoader;
+    }
+
+    private static function getEnvParser(): EnvParser
+    {
+        if (null === self::$envParser) {
+            self::$envParser = new EnvParser();
         }
 
-        throw new \RuntimeException('Root path with .env file not found.');
+        return self::$envParser;
     }
 }

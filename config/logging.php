@@ -1,5 +1,6 @@
 <?php
 
+use KaririCode\Logging\Formatter\JsonFormatter;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\Util\ConfigHelper;
 
@@ -9,13 +10,13 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['daily', 'slack'],
+            'channels' => ['daily', 'slack', 'syslog'],
             'ignore_exceptions' => false,
         ],
 
         'single' => [
             'driver' => 'single',
-            'path' => ConfigHelper::storagePath('logs/logging.log'),
+            'path' => ConfigHelper::storagePath('logs/single.log'),
             'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
             'bubble' => true,
             'permission' => 0664,
@@ -24,7 +25,7 @@ return [
 
         'daily' => [
             'driver' => 'daily',
-            'path' => ConfigHelper::storagePath('logs/logging.log'),
+            'path' => ConfigHelper::storagePath('logs/daily.log'),
             'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
             'days' => 14,
             'bubble' => true,
@@ -53,7 +54,7 @@ return [
             ],
         ],
 
-        'stderr' => [
+        'console' => [
             'driver' => 'monolog',
             'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
             'handler' => \KaririCode\Logging\Handler\ConsoleHandler::class,
@@ -135,6 +136,9 @@ return [
         'enabled' => ConfigHelper::env('QUERY_LOG_ENABLED', false),
         'channel' => ConfigHelper::env('QUERY_LOG_CHANNEL', 'daily'),
         'threshold' => ConfigHelper::env('QUERY_LOG_THRESHOLD', 100), // in milliseconds
+        'path' => ConfigHelper::storagePath('logs/query.log'),
+        'level' => LogLevel::DEBUG,
+        'formatter' => ['class' => JsonFormatter::class],
     ],
 
     'performance_logger' => [
@@ -146,7 +150,12 @@ return [
     'error_logger' => [
         'enabled' => ConfigHelper::env('ERROR_LOG_ENABLED', true),
         'channel' => ConfigHelper::env('ERROR_LOG_CHANNEL', 'daily'),
-        'levels' => [LogLevel::ERROR, LogLevel::CRITICAL, LogLevel::ALERT, LogLevel::EMERGENCY],
+        'levels' => [
+            LogLevel::ERROR,
+            LogLevel::CRITICAL,
+            LogLevel::ALERT,
+            LogLevel::EMERGENCY
+        ],
     ],
 
     'log_cleaner' => [

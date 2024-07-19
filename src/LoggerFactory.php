@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace KaririCode\Logging;
 
 use KaririCode\Contract\Logging\Logger;
-use KaririCode\Logging\Formatter\JsonFormatter;
+use KaririCode\Logging\Decorator\AsyncLogger;
 use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\Handler\FileHandler;
 use KaririCode\Logging\Handler\SlackHandler;
 use KaririCode\Logging\Handler\SyslogUdpHandler;
+use KaririCode\Logging\Util\SlackClient;
 
 class LoggerFactory
 {
@@ -29,7 +30,12 @@ class LoggerFactory
         }
 
         if (isset($config['url'])) {
-            $handlers[] = new SlackHandler($config['url'], LogLevel::from($config['level']->value ?? 'critical'), $formatter);
+            $slackClient = SlackClient::create($config['url']);
+            $handlers[] = new SlackHandler(
+                $slackClient,
+                LogLevel::from($config['level'] ?? 'critical'),
+                $formatter
+            );
         }
 
         if (isset($config['handler'])) {
@@ -55,47 +61,23 @@ class LoggerFactory
         return new LoggerManager($name, $handlers, $processors, $formatter);
     }
 
-    public static function createQueryLogger(string $channel, int $threshold): Logger
+    public static function createQueryLogger(array $config): Logger
     {
-        $config = [
-            'channel' => $channel,
-            'threshold' => $threshold,
-            'formatter' => ['class' => JsonFormatter::class],
-        ];
-
         return self::createLogger('query', $config);
     }
 
-    public static function createPerformanceLogger(string $channel, int $threshold): Logger
+    public static function createPerformanceLogger(array $config): Logger
     {
-        $config = [
-            'channel' => $channel,
-            'threshold' => $threshold,
-            'formatter' => ['class' => JsonFormatter::class],
-        ];
-
         return self::createLogger('performance', $config);
     }
 
-    public static function createErrorLogger(string $channel, array $levels): Logger
+    public static function createErrorLogger(array $config): Logger
     {
-        $config = [
-            'channel' => $channel,
-            'levels' => $levels,
-            'formatter' => ['class' => LineFormatter::class],
-        ];
-
         return self::createLogger('error', $config);
     }
 
-    public static function createAsyncLogger(string $driver, int $batchSize): Logger
+    public static function createAsyncLogger(Logger $logger, int $batchSize): Logger
     {
-        $config = [
-            'driver' => $driver,
-            'batch_size' => $batchSize,
-            'formatter' => ['class' => JsonFormatter::class],
-        ];
-
-        return self::createLogger('async', $config);
+        return new AsyncLogger($logger, $batchSize);
     }
 }

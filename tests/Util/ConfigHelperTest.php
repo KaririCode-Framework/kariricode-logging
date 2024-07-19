@@ -22,9 +22,4 @@ class ConfigHelperTest extends TestCase
     {
         $this->assertStringContainsString('storage', ConfigHelper::storagePath());
     }
-
-    public function testFindRootPath(): void
-    {
-        $this->assertStringContainsString('/app', ConfigHelper::findRootPath());
-    }
 }

@@ -18,64 +18,64 @@ $loggerConfig->load($configPath);
 $serviceProvider = new LoggerServiceProvider();
 $serviceProvider->register($loggerConfig);
 
-// / Obtém o logger padrão
-$defaultLogger = LoggerRegistry::getLogger('default');
+$defaultLogger = LoggerRegistry::getLogger('console');
+$defaultLogger->debug('This is a debug message', ['context' => 'debug']);
+$defaultLogger->info('This is an info message');
+$defaultLogger->notice('This is a notice message', ['context' => 'notice']);
+$defaultLogger->warning('This is a warning message', ['context' => 'warning']);
+$defaultLogger->error('This is an error message', ['context' => 'error']);
+$defaultLogger->critical('This is a critical message', ['context' => 'critical']);
+$defaultLogger->alert('This is an alert message', ['context' => 'alert']);
+$defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
 
-// Testa o logger padrão
-$defaultLogger->info('This is an info message.');
-$defaultLogger->error('This is an error message.');
-
-// Testa o logger assíncrono
-if (LoggerRegistry::getLogger('async') instanceof AsyncLogger) {
-    $asyncLogger = LoggerRegistry::getLogger('async');
-    $asyncLogger->info('This is an async info message.');
-    $asyncLogger->error('This is an async error message.');
+$asyncLogger = LoggerRegistry::getLogger('async');
+if ($asyncLogger) {
+    for ($i = 0; $i < 2; ++$i) {
+        $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
+    }
 }
 
-// Testa o query logger
-if (LoggerRegistry::getLogger('query')) {
-    $queryLogger = LoggerRegistry::getLogger('query');
-    $queryLogger->debug('Executing query...', ['query' => 'SELECT * FROM users', 'bindings' => []]);
-}
+$queryLogger = LoggerRegistry::getLogger('query');
+$queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => [], 'time' => 150]);
 
-// Testa o performance logger
-if (LoggerRegistry::getLogger('performance')) {
-    $performanceLogger = LoggerRegistry::getLogger('performance');
-    $performanceLogger->debug('Performance logging', ['execution_time' => 1500]);
-}
+// // Testa o performance logger
+// if (LoggerRegistry::getLogger('performance')) {
+//     $performanceLogger = LoggerRegistry::getLogger('performance');
+//     $performanceLogger->debug('Performance logging', ['execution_time' => 1500]);
+// }
 
-// Testa o error logger
-if (LoggerRegistry::getLogger('error')) {
-    $errorLogger = LoggerRegistry::getLogger('error');
-    $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
-}
+// // Testa o error logger
+// if (LoggerRegistry::getLogger('error')) {
+//     $errorLogger = LoggerRegistry::getLogger('error');
+//     $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
+// }
 
-// Exemplo de registro de um log de emergência
-$emergencyLogger = LoggerRegistry::getLogger('emergency');
-$emergencyLogger->emergency('This is an emergency message.');
+// // Exemplo de registro de um log de emergência
+// $emergencyLogger = LoggerRegistry::getLogger('emergency');
+// $emergencyLogger->emergency('This is an emergency message.');
 
-// Exemplo de registro de um log com processador de introspecção
-$defaultLogger->info('Testing introspection processor.');
+// // Exemplo de registro de um log com processador de introspecção
+// $defaultLogger->info('Testing introspection processor.');
 
-// Exemplo de registro de um log com processador de memória
-$defaultLogger->debug('Testing memory usage processor.', ['memory_usage' => memory_get_usage(true)]);
+// // Exemplo de registro de um log com processador de memória
+// $defaultLogger->debug('Testing memory usage processor.', ['memory_usage' => memory_get_usage(true)]);
 
-// Exemplo de registro de um log com processador de Git
-$defaultLogger->info('Testing Git processor.', ['branch' => 'main', 'commit' => '1234567890abcdef']);
+// // Exemplo de registro de um log com processador de Git
+// $defaultLogger->info('Testing Git processor.', ['branch' => 'main', 'commit' => '1234567890abcdef']);
 
-// Exemplo de registro de um log com processador Web
-$_SERVER['REQUEST_URI'] = '/test-uri';
-$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
-$_SERVER['REQUEST_METHOD'] = 'GET';
-$_SERVER['SERVER_NAME'] = 'localhost';
-$_SERVER['HTTP_REFERER'] = 'http://localhost/referrer';
+// // Exemplo de registro de um log com processador Web
+// $_SERVER['REQUEST_URI'] = '/test-uri';
+// $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+// $_SERVER['REQUEST_METHOD'] = 'GET';
+// $_SERVER['SERVER_NAME'] = 'localhost';
+// $_SERVER['HTTP_REFERER'] = 'http://localhost/referrer';
 
-$defaultLogger->info('Testing web processor.', [
-    'url' => ($_SERVER['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/'),
-    'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-    'http_method' => $_SERVER['REQUEST_METHOD'] ?? null,
-    'server' => $_SERVER['SERVER_NAME'] ?? null,
-    'referrer' => $_SERVER['HTTP_REFERER'] ?? null,
-]);
+// $defaultLogger->info('Testing web processor.', [
+//     'url' => ($_SERVER['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/'),
+//     'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+//     'http_method' => $_SERVER['REQUEST_METHOD'] ?? null,
+//     'server' => $_SERVER['SERVER_NAME'] ?? null,
+//     'referrer' => $_SERVER['HTTP_REFERER'] ?? null,
+// ]);
 
-echo "All loggers tested successfully.\n";
+// echo "All loggers tested successfully.\n";

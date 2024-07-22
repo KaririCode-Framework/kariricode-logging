@@ -25,25 +25,42 @@ class AsyncLogProcessor
     private function ensureProcessingStarted(): void
     {
         if (null === $this->processingFiber || $this->processingFiber->isTerminated()) {
-            $this->processingFiber = new \Fiber(function (): void {
-                while (!empty($this->queue)) {
-                    $batch = array_splice($this->queue, 0, $this->batchSize);
-                    foreach ($batch as $record) {
-                        $this->logger->log($record->level, $record->message, $record->context);
-                        \Fiber::suspend(); // Cooperatively yield control
-                    }
-                }
-            });
-            $this->processingFiber->start();
+            $this->startFiber();
         } elseif ($this->processingFiber->isSuspended()) {
             $this->processingFiber->resume();
         }
     }
 
-    public function __destruct()
+    private function startFiber(): void
+    {
+        $this->processingFiber = new \Fiber(function (): void {
+            while (!empty($this->queue)) {
+                $batch = array_splice($this->queue, 0, $this->batchSize);
+                foreach ($batch as $record) {
+                    $this->processRecord($record);
+                    \Fiber::suspend(); // Cooperatively yield control
+                }
+            }
+        });
+
+        $this->processingFiber->start();
+    }
+
+    private function processRecord(LogRecord $record): void
+    {
+        $this->logger->log($record->level, $record->message, $record->context);
+    }
+
+    public function processRemaining(): void
     {
         while (!empty($this->queue)) {
             $this->ensureProcessingStarted();
         }
+    }
+
+
+    public function __destruct()
+    {
+        $this->processRemaining();
     }
 }

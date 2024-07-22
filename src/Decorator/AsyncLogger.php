@@ -17,6 +17,10 @@ class AsyncLogger extends BaseLoggerDecorator
     {
         parent::__construct($logger);
         $this->processor = new AsyncLogProcessor($logger, $batchSize);
+
+        // Register shutdown function to ensure logs are processed
+        register_shutdown_function([$this, 'shutdown']);
+
     }
 
     public function log(LogLevel $level, \Stringable|string $message, array $context = []): void
@@ -25,9 +29,13 @@ class AsyncLogger extends BaseLoggerDecorator
         $this->processor->enqueue($record);
     }
 
+    public function shutdown(): void
+    {
+        $this->processor->processRemaining();
+    }
+
     public function __destruct()
     {
-        // Explicitly call the destructor to ensure all logs are processed before object is destroyed
-        $this->processor->__destruct();
+        $this->shutdown();
     }
 }

@@ -16,7 +16,6 @@ $configPath = __DIR__ . '/../config/logging.php';
 $loggerConfig = new LoggerConfiguration();
 $loggerConfig->load($configPath);
 
-
 $loggerFactory = new LoggerFactory();
 $loggerRegistry = new LoggerRegistry();
 $serviceProvider = new LoggerServiceProvider(

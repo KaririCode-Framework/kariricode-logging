@@ -10,22 +10,32 @@ use PHPUnit\Framework\TestCase;
 
 class LoggerRegistryTest extends TestCase
 {
-    public function testAddAndRetrieveLogger(): void
-    {
-        $logger = $this->createMock(Logger::class);
-        LoggerRegistry::addLogger('test', $logger);
+    private LoggerRegistry $registry;
 
-        $retrievedLogger = LoggerRegistry::getLogger('test');
-        $this->assertSame($logger, $retrievedLogger);
+    protected function setUp(): void
+    {
+        $this->registry = new LoggerRegistry();
+    }
+
+    public function testAddAndGetLogger(): void
+    {
+        $mockLogger = $this->createMock(Logger::class);
+        $this->registry->addLogger('test', $mockLogger);
+
+        $this->assertSame($mockLogger, $this->registry->getLogger('test'));
+    }
+
+    public function testGetNonexistentLogger(): void
+    {
+        $this->assertNull($this->registry->getLogger('nonexistent'));
     }
 
     public function testRemoveLogger(): void
     {
-        $logger = $this->createMock(Logger::class);
-        LoggerRegistry::addLogger('test', $logger);
-        LoggerRegistry::removeLogger('test');
+        $mockLogger = $this->createMock(Logger::class);
+        $this->registry->addLogger('test', $mockLogger);
+        $this->registry->removeLogger('test');
 
-        $retrievedLogger = LoggerRegistry::getLogger('test');
-        $this->assertNull($retrievedLogger);
+        $this->assertNull($this->registry->getLogger('test'));
     }
 }

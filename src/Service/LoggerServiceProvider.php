@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KaririCode\Logging\Service;
 
+use KaririCode\Logging\Exception\InvalidConfigurationException;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
@@ -27,7 +28,11 @@ class LoggerServiceProvider
     private function registerDefaultLoggers(): void
     {
         $defaultChannel = $this->config->get('default');
-        $channelsConfig = $this->config->get('channels', []);
+        $channelsConfig = $this->config->get('channels');
+
+        if (null === $defaultChannel || null === $channelsConfig) {
+            throw new InvalidConfigurationException("The 'default' and 'channels' configurations are required.");
+        }
 
         foreach ($channelsConfig as $channelName => $channelConfig) {
             $logger = $this->loggerFactory->createLogger($channelName, $channelConfig);
@@ -42,7 +47,10 @@ class LoggerServiceProvider
     private function registerEmergencyLogger(): void
     {
         $emergencyLoggerConfig = $this->config->get('emergency_logger', []);
-        $emergencyLogger = $this->loggerFactory->createLogger('emergency', $emergencyLoggerConfig);
+        $emergencyLogger = $this->loggerFactory->createLogger(
+            'emergency',
+            $emergencyLoggerConfig
+        );
         $this->loggerRegistry->addLogger('emergency', $emergencyLogger);
     }
 
@@ -54,8 +62,11 @@ class LoggerServiceProvider
         $this->registerAsyncLoggerIfEnabled();
     }
 
-    private function registerLoggerIfEnabled(string $configKey, string $factoryMethod, bool $defaultEnabled = false): void
-    {
+    private function registerLoggerIfEnabled(
+        string $configKey,
+        string $factoryMethod,
+        bool $defaultEnabled = false
+    ): void {
         if ($this->config->get("$configKey.enabled", $defaultEnabled)) {
             $loggerConfig = $this->config->get($configKey, []);
             $logger = $this->loggerFactory->$factoryMethod($loggerConfig);

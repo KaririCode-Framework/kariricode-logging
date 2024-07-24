@@ -1,12 +1,16 @@
 <?php
 
-namespace KaririCode\Logging\Processor;
+namespace KaririCode\Logging\Processor\Metric;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Logging\LogRecord;
+use KaririCode\Logging\Processor\AbstractProcessor;
 
 class MemoryUsageProcessor extends AbstractProcessor
 {
+    /**
+     * @param LogRecord $record
+     */
     public function process(ImmutableValue $record): ImmutableValue
     {
         $memoryUsage = memory_get_usage(true);

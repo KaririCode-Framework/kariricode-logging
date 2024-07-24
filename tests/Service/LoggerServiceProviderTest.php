@@ -39,7 +39,7 @@ class LoggerServiceProviderTest extends TestCase
             ['default', null, 'default'],
             ['channels', [], [
                 'default' => ['path' => '/var/log/default.log', 'level' => 'debug'],
-                'error' => ['path' => '/var/log/error.log', 'level' => 'error']
+                'error' => ['path' => '/var/log/error.log', 'level' => 'error'],
             ]],
             ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
             ['query_logger.enabled', false, true],
@@ -87,7 +87,7 @@ class LoggerServiceProviderTest extends TestCase
             ['query', $queryLogger],
             ['performance', $performanceLogger],
             ['error', $errorLogger],
-            ['async', $asyncLogger]
+            ['async', $asyncLogger],
         ];
 
         $this->loggerRegistry->expects($this->exactly(count($expectedAddLoggerCalls)))
@@ -116,7 +116,7 @@ class LoggerServiceProviderTest extends TestCase
             ['default', null, 'default'],
             ['channels', [], [
                 'default' => ['path' => '/var/log/default.log', 'level' => 'debug'],
-                'error' => ['path' => '/var/log/error.log', 'level' => 'error']
+                'error' => ['path' => '/var/log/error.log', 'level' => 'error'],
             ]],
             ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
             ['query_logger.enabled', false, false],

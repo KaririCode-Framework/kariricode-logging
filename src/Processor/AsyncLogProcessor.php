@@ -58,7 +58,6 @@ class AsyncLogProcessor
         }
     }
 
-
     public function __destruct()
     {
         $this->processRemaining();

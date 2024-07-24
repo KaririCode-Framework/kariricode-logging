@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KaririCode\Logging;
 
 use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Exception\LoggerNotFoundException;
 
 class LoggerRegistry
 {
@@ -15,9 +16,13 @@ class LoggerRegistry
         $this->loggers[$name] = $logger;
     }
 
-    public function getLogger(string $name): ?Logger
+    public function getLogger(string $name): Logger
     {
-        return $this->loggers[$name] ?? null;
+        if (!isset($this->loggers[$name])) {
+            throw new LoggerNotFoundException("Logger with name '$name' not found.");
+        }
+
+        return $this->loggers[$name];
     }
 
     public function removeLogger(string $name): void

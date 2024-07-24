@@ -20,7 +20,6 @@ class AsyncLogger extends BaseLoggerDecorator
 
         // Register shutdown function to ensure logs are processed
         register_shutdown_function([$this, 'shutdown']);
-
     }
 
     public function log(LogLevel $level, \Stringable|string $message, array $context = []): void

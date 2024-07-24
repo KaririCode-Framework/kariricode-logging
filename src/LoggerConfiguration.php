@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace KaririCode\Logging;
 
 use KaririCode\Logging\Exception\LoggingException;
+use KaririCode\Logging\Validation\ConfigurationValidator;
 
 class LoggerConfiguration
 {
     private array $config = [];
+
+    public function __construct(
+        private ConfigurationValidator $validator = new ConfigurationValidator()
+    ) {
+    }
 
     public function set(string $key, mixed $value): void
     {
@@ -33,12 +39,22 @@ class LoggerConfiguration
         }
 
         $this->config = $loadedConfig;
+        $this->validate();
+    }
+
+    public function getConfig(): array
+    {
+        return $this->config;
+    }
+
+    public function validate(): void
+    {
+        $this->validator->validate($this->config);
     }
 
     private function setNestedValue(array &$array, array $keys, mixed $value): void
     {
         $key = array_shift($keys);
-
         if (empty($keys)) {
             $array[$key] = $value;
         } else {
@@ -57,7 +73,6 @@ class LoggerConfiguration
             }
             $array = $array[$key];
         }
-
         return $array;
     }
 

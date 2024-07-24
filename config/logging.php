@@ -233,11 +233,11 @@ return [
         'driver' => \KaririCode\Logging\Decorator\AsyncLogger::class,
         'batch_size' => 10,
     ],
-    'emergency_logger' => [
+    'emergency' => [
         'path' => ConfigHelper::storagePath('logs/emergency.log'),
         'level' => LogLevel::EMERGENCY,
     ],
-    'query_logger' => [
+    'query' => [
         'enabled' => ConfigHelper::env('QUERY_LOG_ENABLED', false),
         'channel' => ConfigHelper::env('QUERY_LOG_CHANNEL', 'file'),
         'threshold' => ConfigHelper::env('QUERY_LOG_THRESHOLD', 100), // in milliseconds
@@ -250,7 +250,7 @@ return [
             ],
         ],
     ],
-    'performance_logger' => [
+    'performance' => [
         'enabled' => ConfigHelper::env('PERFORMANCE_LOG_ENABLED', false),
         'channel' => ConfigHelper::env('PERFORMANCE_LOG_CHANNEL', 'file'),
         'threshold' => ConfigHelper::env('PERFORMANCE_LOG_THRESHOLD', 1000), // in milliseconds
@@ -265,7 +265,7 @@ return [
             'execution_time_processor',
         ],
     ],
-    'error_logger' => [
+    'error' => [
         'enabled' => ConfigHelper::env('ERROR_LOG_ENABLED', true),
         'channel' => ConfigHelper::env('ERROR_LOG_CHANNEL', 'file'),
         'levels' => [

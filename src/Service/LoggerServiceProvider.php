@@ -56,9 +56,9 @@ class LoggerServiceProvider
 
     private function registerOptionalLoggers(): void
     {
-        $this->registerLoggerIfEnabled('query_logger', 'createQueryLogger');
-        $this->registerLoggerIfEnabled('performance_logger', 'createPerformanceLogger');
-        $this->registerLoggerIfEnabled('error_logger', 'createErrorLogger', true);
+        $this->registerLoggerIfEnabled('query', 'createQueryLogger');
+        $this->registerLoggerIfEnabled('performance', 'createPerformanceLogger');
+        $this->registerLoggerIfEnabled('error', 'createErrorLogger', true);
         $this->registerAsyncLoggerIfEnabled();
     }
 

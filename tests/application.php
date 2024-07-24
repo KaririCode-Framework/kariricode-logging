@@ -26,22 +26,22 @@ $serviceProvider = new LoggerServiceProvider(
 
 $serviceProvider->register();
 
-// $defaultLogger = $loggerRegistry->getLogger('file');
-// $defaultLogger->debug('This is a debug message', ['context' => 'debug']);
-// $defaultLogger->info('This is an info message');
-// $defaultLogger->notice('This is a notice message', ['context' => 'notice']);
-// $defaultLogger->warning('This is a warning message', ['context' => 'warning']);
-// $defaultLogger->error('This is an error message', ['context' => 'error']);
-// $defaultLogger->critical('This is a critical message', ['context' => 'critical']);
-// $defaultLogger->alert('This is an alert message', ['context' => 'alert']);
-// $defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
+$defaultLogger = $loggerRegistry->getLogger('console');
+$defaultLogger->debug('This is a debug message', ['context' => 'debug']);
+$defaultLogger->info('This is an info message');
+$defaultLogger->notice('This is a notice message', ['context' => 'notice']);
+$defaultLogger->warning('This is a warning message', ['context' => 'warning']);
+$defaultLogger->error('This is an error message', ['context' => 'error']);
+$defaultLogger->critical('This is a critical message', ['context' => 'critical']);
+$defaultLogger->alert('This is an alert message', ['context' => 'alert']);
+$defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
 
-// $asyncLogger = $loggerRegistry->getLogger('async');
-// if ($asyncLogger) {
-//     for ($i = 0; $i < 2; ++$i) {
-//         $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
-//     }
-// }
+$asyncLogger = $loggerRegistry->getLogger('async');
+if ($asyncLogger) {
+    for ($i = 0; $i < 2; ++$i) {
+        $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
+    }
+}
 
 $queryLogger = $loggerRegistry->getLogger('query');
 $queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => [], 'time' => 150]);

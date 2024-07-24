@@ -6,10 +6,9 @@ namespace KaririCode\Logging\Util;
 
 use KaririCode\Logging\Exception\InvalidConfigurationException;
 use ReflectionClass;
-use ReflectionException;
 
 /**
- * Trait ReflectionFactoryTrait
+ * Trait ReflectionFactoryTrait.
  *
  * Provides methods for creating instances of classes using reflection and managing configurations.
  */
@@ -18,33 +17,36 @@ trait ReflectionFactoryTrait
     /**
      * Creates an instance of the specified class with the given parameters.
      *
-     * @param string $class The fully qualified class name.
-     * @param array $parameters An array of parameters to pass to the constructor.
-     * @return object The created instance.
-     * @throws InvalidConfigurationException If the class doesn't exist or is not instantiable.
-     * @throws ReflectionException If there's an error during reflection.
+     * @param string $class the fully qualified class name
+     * @param array $parameters an array of parameters to pass to the constructor
+     *
+     * @throws InvalidConfigurationException if the class doesn't exist or is not instantiable
+     * @throws \ReflectionException if there's an error during reflection
+     *
+     * @return object the created instance
      */
     public function createInstance(string $class, array $parameters = []): object
     {
         $reflectionClass = $this->getReflectionClass($class);
         $filteredParameters = $this->filterConstructorParameters($reflectionClass, $parameters);
+
         return $reflectionClass->newInstanceArgs($filteredParameters);
     }
 
     /**
      * Gets a ReflectionClass instance after validating the class.
      *
-     * @param string $class The fully qualified class name.
-     * @return ReflectionClass
-     * @throws InvalidConfigurationException If the class doesn't exist or is not instantiable.
+     * @param string $class the fully qualified class name
+     *
+     * @throws InvalidConfigurationException if the class doesn't exist or is not instantiable
      */
-    protected function getReflectionClass(string $class): ReflectionClass
+    protected function getReflectionClass(string $class): \ReflectionClass
     {
         if (!class_exists($class)) {
             throw new InvalidConfigurationException("Class does not exist: $class");
         }
 
-        $reflectionClass = new ReflectionClass($class);
+        $reflectionClass = new \ReflectionClass($class);
 
         if (!$reflectionClass->isInstantiable()) {
             throw new InvalidConfigurationException("Class is not instantiable: $class");
@@ -56,12 +58,14 @@ trait ReflectionFactoryTrait
     /**
      * Filters the parameters to match the constructor's expected parameters.
      *
-     * @param ReflectionClass $reflectionClass The reflection class.
-     * @param array $parameters The parameters to filter.
-     * @return array The filtered parameters.
-     * @throws InvalidConfigurationException If a required parameter is missing.
+     * @param \ReflectionClass $reflectionClass the reflection class
+     * @param array $parameters the parameters to filter
+     *
+     * @throws InvalidConfigurationException if a required parameter is missing
+     *
+     * @return array the filtered parameters
      */
-    protected function filterConstructorParameters(ReflectionClass $reflectionClass, array $parameters): array
+    protected function filterConstructorParameters(\ReflectionClass $reflectionClass, array $parameters): array
     {
         $constructor = $reflectionClass->getConstructor();
         if (!$constructor) {
@@ -90,10 +94,12 @@ trait ReflectionFactoryTrait
     /**
      * Gets the class from a configuration map.
      *
-     * @param array $map The configuration map.
-     * @param string $key The key to look up in the map.
-     * @return string The fully qualified class name.
-     * @throws InvalidConfigurationException If the class configuration is invalid or the class doesn't exist.
+     * @param array $map the configuration map
+     * @param string $key the key to look up in the map
+     *
+     * @throws InvalidConfigurationException if the class configuration is invalid or the class doesn't exist
+     *
+     * @return string the fully qualified class name
      */
     protected function getClassFromMap(array $map, string $key): string
     {
@@ -107,10 +113,12 @@ trait ReflectionFactoryTrait
     /**
      * Validates and extracts the class from a configuration value.
      *
-     * @param mixed $config The configuration value.
-     * @param string $key The configuration key (for error reporting).
-     * @return string The validated class name.
-     * @throws InvalidConfigurationException If the class configuration is invalid or the class doesn't exist.
+     * @param mixed $config the configuration value
+     * @param string $key the configuration key (for error reporting)
+     *
+     * @throws InvalidConfigurationException if the class configuration is invalid or the class doesn't exist
+     *
+     * @return string the validated class name
      */
     protected function validateAndExtractClass($config, string $key): string
     {
@@ -126,11 +134,12 @@ trait ReflectionFactoryTrait
     /**
      * Gets configuration from a map for a specific key.
      *
-     * @param array $map The configuration map.
-     * @param string $key The key to look up in the map.
-     * @param string $configKey The configuration key to retrieve (default: 'with').
-     * @param array $default The default value if the configuration is not found.
-     * @return array The configuration array.
+     * @param array $map the configuration map
+     * @param string $key the key to look up in the map
+     * @param string $configKey the configuration key to retrieve (default: 'with')
+     * @param array $default the default value if the configuration is not found
+     *
+     * @return array the configuration array
      */
     protected function getConfigFromMap(array $map, string $key, string $configKey = 'with', $default = []): array
     {
@@ -141,7 +150,8 @@ trait ReflectionFactoryTrait
      * Merges multiple configurations.
      *
      * @param array ...$configs The configurations to merge.
-     * @return array The merged configuration.
+     *
+     * @return array the merged configuration
      */
     protected function mergeConfigurations(array ...$configs): array
     {
@@ -151,24 +161,27 @@ trait ReflectionFactoryTrait
     /**
      * Gets the component configuration by merging default and channel-specific configs.
      *
-     * @param string $componentType The type of the component.
-     * @param string $componentName The name of the component.
-     * @param array $channelConfig The channel-specific configuration.
-     * @param array $defaultConfig The default configuration.
-     * @return array The merged component configuration.
+     * @param string $componentType the type of the component
+     * @param string $componentName the name of the component
+     * @param array $channelConfig the channel-specific configuration
+     * @param array $defaultConfig the default configuration
+     *
+     * @return array the merged component configuration
      */
     protected function getComponentConfig(string $componentType, string $componentName, array $channelConfig, array $defaultConfig): array
     {
         $channelComponentConfig = $channelConfig[$componentType][$componentName] ?? [];
+
         return $this->mergeConfigurations($defaultConfig, $channelComponentConfig);
     }
 
     /**
      * Extracts the merged configuration from a key-value pair.
      *
-     * @param mixed $key The configuration key.
-     * @param mixed $value The configuration value.
-     * @return array An array containing the extracted class and configuration.
+     * @param mixed $key the configuration key
+     * @param mixed $value the configuration value
+     *
+     * @return array an array containing the extracted class and configuration
      */
     protected function extractMergedConfig($key, $value): array
     {
@@ -182,8 +195,9 @@ trait ReflectionFactoryTrait
     /**
      * Checks if the given key represents a simple handler configuration.
      *
-     * @param mixed $key The configuration key to check.
-     * @return bool True if it's a simple handler configuration, false otherwise.
+     * @param mixed $key the configuration key to check
+     *
+     * @return bool true if it's a simple handler configuration, false otherwise
      */
     protected function isSimpleHandlerConfig($key): bool
     {

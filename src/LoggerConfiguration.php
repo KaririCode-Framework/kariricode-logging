@@ -73,6 +73,7 @@ class LoggerConfiguration
             }
             $array = $array[$key];
         }
+
         return $array;
     }
 

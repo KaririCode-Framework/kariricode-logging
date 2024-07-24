@@ -15,28 +15,22 @@ class ConfigurationValidator
         'processors',
         'formatters',
     ];
-
     private const CHANNEL_REQUIRED_KEYS = [
         'handlers',
     ];
-
     private const HANDLER_REQUIRED_KEYS = [
         'class',
     ];
-
     private const PROCESSOR_REQUIRED_KEYS = [
         'class',
     ];
-
     private const FORMATTER_REQUIRED_KEYS = [
         'class',
     ];
-
     private const OPTIONAL_LOG_KEYS = [
         'enabled',
         'channel',
     ];
-
     private const OPTIONAL_LOGS = [
         'query',
         'performance',
@@ -57,7 +51,7 @@ class ConfigurationValidator
     {
         foreach ($requiredKeys as $key) {
             if (!isset($config[$key])) {
-                throw new InvalidConfigurationException("Missing required key '{$key}' in configuration" . ($context ? " for {$context}" : ""));
+                throw new InvalidConfigurationException("Missing required key '{$key}' in configuration" . ($context ? " for {$context}" : ''));
             }
         }
     }

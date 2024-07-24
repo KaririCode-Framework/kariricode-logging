@@ -55,6 +55,7 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
     private function getProcessorConfig(string $processorName, array $channelConfig): array
     {
         $defaultConfig = $this->processorMap[$processorName]['with'] ?? [];
+
         return array_merge($defaultConfig, $channelConfig);
     }
 }

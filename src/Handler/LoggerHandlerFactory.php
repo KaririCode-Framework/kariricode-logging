@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace KaririCode\Logging\Handler;
 
-use InvalidArgumentException;
 use KaririCode\Contract\Logging\LogHandler;
 use KaririCode\Logging\Contract\Logging\LoggerConfigurableFactory;
 use KaririCode\Logging\LoggerConfiguration;
@@ -16,7 +15,6 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
 
     private array $handlerMap = [];
     private LoggerConfiguration $config;
-
 
     public function initializeFromConfiguration(LoggerConfiguration $config): void
     {
@@ -39,6 +37,7 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
             [$handlerName, $handlerOptions] = $this->extractMergedConfig($key, $value);
             $handlers[] = $this->createHandler($handlerName, $handlerOptions);
         }
+
         return $handlers;
     }
 
@@ -53,12 +52,14 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
     private function getChannelHandlersConfig(string $channelName): ?array
     {
         $channelConfigs = $this->config->get('channels', []);
+
         return $channelConfigs[$channelName]['handlers'] ?? null;
     }
 
     private function getOptionalHandlersConfig(string $channelName): ?array
     {
         $optionalHandlerConfigs = $this->config->get($channelName, []);
+
         return $optionalHandlerConfigs['handlers'] ?? $this->getChannelHandlersConfig(
             $optionalHandlerConfigs['channel'] ?? 'file'
         );
@@ -75,6 +76,7 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
     private function getHandlerConfig(string $handlerName, array $handlerOptions): array
     {
         $defaultConfig = $this->handlerMap[$handlerName]['with'] ?? [];
+
         return array_merge($defaultConfig, $handlerOptions);
     }
 }

@@ -56,32 +56,27 @@ class LoggerServiceProvider
 
     private function registerOptionalLoggers(): void
     {
-        $this->registerLoggerIfEnabled('query', 'createQueryLogger');
-        $this->registerLoggerIfEnabled('performance', 'createPerformanceLogger');
-        $this->registerLoggerIfEnabled('error', 'createErrorLogger', true);
+        $this->registerLogger('query', 'createQueryLogger');
+        $this->registerLogger('performance', 'createPerformanceLogger');
+        $this->registerLogger('error', 'createErrorLogger');
         $this->registerAsyncLoggerIfEnabled();
     }
 
-    private function registerLoggerIfEnabled(
+    private function registerLogger(
         string $configKey,
         string $factoryMethod,
-        bool $defaultEnabled = false
     ): void {
-        if ($this->config->get("$configKey.enabled", $defaultEnabled)) {
-            $loggerConfig = $this->config->get($configKey, []);
-            $logger = $this->loggerFactory->$factoryMethod($loggerConfig);
-            $this->loggerRegistry->addLogger(explode('_', $configKey)[0], $logger);
-        }
+        $loggerConfig = $this->config->get($configKey, []);
+        $logger = $this->loggerFactory->$factoryMethod($loggerConfig);
+        $this->loggerRegistry->addLogger($configKey, $logger);
     }
 
     private function registerAsyncLoggerIfEnabled(): void
     {
-        if ($this->config->get('async.enabled', true)) {
-            $asyncLogger = $this->loggerFactory->createAsyncLogger(
-                $this->loggerRegistry->getLogger('default'),
-                (int) $this->config->get('async.batch_size', 10)
-            );
-            $this->loggerRegistry->addLogger('async', $asyncLogger);
-        }
+        $asyncLogger = $this->loggerFactory->createAsyncLogger(
+            $this->loggerRegistry->getLogger('default'),
+            (int) $this->config->get('async.batch_size', 10)
+        );
+        $this->loggerRegistry->addLogger('async', $asyncLogger);
     }
 }

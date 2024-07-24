@@ -32,6 +32,17 @@ class ConfigurationValidator
         'class',
     ];
 
+    private const OPTIONAL_LOG_KEYS = [
+        'enabled',
+        'channel',
+    ];
+
+    private const OPTIONAL_LOGS = [
+        'query',
+        'performance',
+        'error',
+    ];
+
     public function validate(array $config): void
     {
         $this->validateRequiredKeys($config, self::REQUIRED_KEYS);
@@ -39,6 +50,7 @@ class ConfigurationValidator
         $this->validateHandlers($config['handlers']);
         $this->validateProcessors($config['processors']);
         $this->validateFormatters($config['formatters']);
+        $this->validateOptionalLogs($config);
     }
 
     private function validateRequiredKeys(array $config, array $requiredKeys, string $context = ''): void
@@ -90,6 +102,23 @@ class ConfigurationValidator
 
             if (!class_exists($formatterConfig['class'])) {
                 throw new InvalidConfigurationException("Formatter class '{$formatterConfig['class']}' for '{$formatterName}' does not exist");
+            }
+        }
+    }
+
+    private function validateOptionalLogs(array $config): void
+    {
+        foreach (self::OPTIONAL_LOGS as $log) {
+            if (isset($config[$log])) {
+                $this->validateRequiredKeys($config[$log], self::OPTIONAL_LOG_KEYS, "optional log '{$log}'");
+
+                if (isset($config[$log]['handlers']) && !is_array($config[$log]['handlers'])) {
+                    throw new InvalidConfigurationException("Handlers for optional log '{$log}' must be an array");
+                }
+
+                if (isset($config[$log]['processors']) && !is_array($config[$log]['processors'])) {
+                    throw new InvalidConfigurationException("Processors for optional log '{$log}' must be an array");
+                }
             }
         }
     }

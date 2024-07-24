@@ -26,7 +26,7 @@ $serviceProvider = new LoggerServiceProvider(
 
 $serviceProvider->register();
 
-$defaultLogger = $loggerRegistry->getLogger('console');
+$defaultLogger = $loggerRegistry->getLogger('file');
 $defaultLogger->debug('This is a debug message', ['context' => 'debug']);
 $defaultLogger->info('This is an info message');
 $defaultLogger->notice('This is a notice message', ['context' => 'notice']);

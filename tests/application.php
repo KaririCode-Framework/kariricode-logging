@@ -27,7 +27,7 @@ $serviceProvider = new LoggerServiceProvider(
 $serviceProvider->register();
 
 $defaultLogger = $loggerRegistry->getLogger('file');
-$defaultLogger->debug('This is a debug message', ['context' => 'debug']);
+$defaultLogger->debug('This is a debug message');
 $defaultLogger->info('This is an info message');
 $defaultLogger->notice('This is a notice message', ['context' => 'notice']);
 $defaultLogger->warning('This is a warning message', ['context' => 'warning']);
@@ -38,7 +38,7 @@ $defaultLogger->emergency('This is an emergency message', ['context' => 'emergen
 
 $asyncLogger = $loggerRegistry->getLogger('async');
 if ($asyncLogger) {
-    for ($i = 0; $i < 2; ++$i) {
+    for ($i = 0; $i < 3; ++$i) {
         $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
     }
 }

@@ -14,7 +14,6 @@ class LogRecord implements ImmutableValue
         public readonly string|\Stringable $message,
         public readonly array $context = [],
         public readonly \DateTimeImmutable $datetime = new \DateTimeImmutable(),
-        public readonly array $extra = []
     ) {
     }
 
@@ -25,7 +24,6 @@ class LogRecord implements ImmutableValue
             'message' => $this->message,
             'context' => $this->context,
             'datetime' => $this->datetime,
-            'extra' => $this->extra,
         ];
     }
 }

@@ -14,7 +14,7 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
     use ReflectionFactoryTrait;
 
     private array $processorMap = [];
-    private array $channelConfigs = [];
+    private LoggerConfiguration $config;
 
     public function initializeFromConfiguration(LoggerConfiguration $config): void
     {
@@ -27,21 +27,52 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
             'web_processor' => WebProcessor::class,
         ]);
 
-        $this->channelConfigs = $config->get('channels', []);
+        $this->config = $config;
     }
 
     public function createProcessors(string $channelName): array
     {
-        $channelConfig = $this->channelConfigs[$channelName] ?? [];
-        $processorsConfig = $channelConfig['processors'] ?? [];
+        $processorsConfig = $this->getProcessorsConfig($channelName);
         $processors = [];
         foreach ($processorsConfig as $key => $value) {
             [$processorName, $processorOptions] = $this->extractMergedConfig($key, $value);
-
             $processors[] = $this->createProcessor($processorName, $processorOptions);
         }
 
         return $processors;
+    }
+
+    private function getProcessorsConfig(string $channelName): array
+    {
+        $channelProcessorConfig = $this->getChannelProcessorsConfig($channelName);
+        $optionalProcessorConfig = $this->getOptionalProcessorsConfig($channelName);
+
+        return array_merge($channelProcessorConfig ?? [], $optionalProcessorConfig ?? []);
+    }
+
+    private function getChannelProcessorsConfig(string $channelName): ?array
+    {
+        $channelConfigs = $this->config->get('channels', []);
+
+        return $channelConfigs[$channelName]['processors'] ?? null;
+    }
+
+    private function getOptionalProcessorsConfig(string $channelName): ?array
+    {
+        $optionalProcessorConfigs = $this->config->get($channelName, []);
+
+        if (!self::isOptionalProcessorEnabled($optionalProcessorConfigs)) {
+            return [];
+        }
+
+        return $optionalProcessorConfigs['processors'] ?? $this->getChannelProcessorsConfig(
+            $optionalProcessorConfigs['channel'] ?? 'file'
+        );
+    }
+
+    private static function isOptionalProcessorEnabled(array $optionalProcessorConfigs): bool
+    {
+        return isset($optionalProcessorConfigs['enabled']) && $optionalProcessorConfigs['enabled'];
     }
 
     private function createProcessor(string $processorName, array $processorOptions): ProcessorAware

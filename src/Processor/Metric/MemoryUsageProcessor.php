@@ -25,8 +25,7 @@ class MemoryUsageProcessor extends AbstractProcessor
             $record->level,
             $record->message,
             $context,
-            $record->datetime,
-            $record->extra
+            $record->datetime
         );
     }
 

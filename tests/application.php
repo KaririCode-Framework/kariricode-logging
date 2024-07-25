@@ -26,34 +26,34 @@ $serviceProvider = new LoggerServiceProvider(
 
 $serviceProvider->register();
 
-$defaultLogger = $loggerRegistry->getLogger('file');
-$defaultLogger->debug('This is a debug message');
-$defaultLogger->info('This is an info message');
-$defaultLogger->notice('This is a notice message', ['context' => 'notice']);
-$defaultLogger->warning('This is a warning message', ['context' => 'warning']);
-$defaultLogger->error('This is an error message', ['context' => 'error']);
-$defaultLogger->critical('This is a critical message', ['context' => 'critical']);
-$defaultLogger->alert('This is an alert message', ['context' => 'alert']);
-$defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
+// $defaultLogger = $loggerRegistry->getLogger('console');
+// $defaultLogger->debug('This is a debug message');
+// $defaultLogger->info('This is an info message');
+// $defaultLogger->notice('This is a notice message', ['context' => 'notice']);
+// $defaultLogger->warning('This is a warning message', ['context' => 'warning']);
+// $defaultLogger->error('This is an error message', ['context' => 'error']);
+// $defaultLogger->critical('This is a critical message', ['context' => 'critical']);
+// $defaultLogger->alert('This is an alert message', ['context' => 'alert']);
+// $defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
 
-$asyncLogger = $loggerRegistry->getLogger('async');
-if ($asyncLogger) {
-    for ($i = 0; $i < 3; ++$i) {
-        $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
-    }
-}
+// $asyncLogger = $loggerRegistry->getLogger('async');
+// if ($asyncLogger) {
+//     for ($i = 0; $i < 3; ++$i) {
+//         $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
+//     }
+// }
 
-$queryLogger = $loggerRegistry->getLogger('query');
-$queryLogger->info('Executing a query', ['time' => 90, 'query' => 'SELECT * FROM users', 'bindings' => []]);
+// $queryLogger = $loggerRegistry->getLogger('query');
+// $queryLogger->info('Executing a query', ['time' => 90, 'query' => 'SELECT * FROM users', 'bindings' => []]);
 
-$queryLogger = $loggerRegistry->getLogger('query');
-$queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => []]);
-
-$performanceLogger = $loggerRegistry->getLogger('performance');
-$performanceLogger->debug('Performance logging', ['execution_time' => 100, 'additional_context' => 'example']);
+// $queryLogger = $loggerRegistry->getLogger('query');
+// $queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => []]);
 
 $performanceLogger = $loggerRegistry->getLogger('performance');
-$performanceLogger->debug('Performance logging', ['additional_context' => 'example']);
+$performanceLogger->debug('Performance logging', ['execution_time' => 1000, 'additional_context' => 'example']);
+
+// $performanceLogger = $loggerRegistry->getLogger('performance');
+// $performanceLogger->debug('Performance logging');
 
 // // // Testa o error logger
 // // if (LoggerRegistry::getLogger('error')) {

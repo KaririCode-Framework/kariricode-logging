@@ -16,6 +16,8 @@ class LoggerManager implements Logger
 {
     use LoggerTrait;
 
+    private array $thresholds = [];
+
     public function __construct(
         private readonly string $name,
         private array $handlers = [],
@@ -24,8 +26,17 @@ class LoggerManager implements Logger
     ) {
     }
 
+    public function setThreshold(string $key, int $value): void
+    {
+        $this->thresholds[$key] = $value;
+    }
+
     public function log(LogLevel $level, string|\Stringable $message, array $context = []): void
     {
+        if (!$this->passesThreshold($context)) {
+            return;
+        }
+
         $record = new LogRecord($level, $message, $context);
 
         foreach ($this->processors as $processor) {
@@ -35,6 +46,17 @@ class LoggerManager implements Logger
         foreach ($this->handlers as $handler) {
             $handler->handle($record);
         }
+    }
+
+    private function passesThreshold(array $context): bool
+    {
+        foreach ($this->thresholds as $key => $threshold) {
+            if (isset($context[$key]) && $context[$key] < $threshold) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function addHandler(HandlerAware $handler): self

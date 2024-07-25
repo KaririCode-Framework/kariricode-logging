@@ -65,7 +65,7 @@ trait ReflectionFactoryTrait
      *
      * @return array the filtered parameters
      */
-    protected function filterConstructorParameters(\ReflectionClass $reflectionClass, array $parameters): array
+    private function filterConstructorParameters(\ReflectionClass $reflectionClass, array $parameters): array
     {
         $constructor = $reflectionClass->getConstructor();
         if (!$constructor) {
@@ -107,7 +107,7 @@ trait ReflectionFactoryTrait
             throw new InvalidConfigurationException("Configuration not found for key: $key");
         }
 
-        return $this->validateAndExtractClass($map[$key], $key);
+        return self::validateAndExtractClass($map[$key], $key);
     }
 
     /**
@@ -120,7 +120,7 @@ trait ReflectionFactoryTrait
      *
      * @return string the validated class name
      */
-    protected function validateAndExtractClass($config, string $key): string
+    protected static function validateAndExtractClass(mixed $config, string $key): string
     {
         $class = is_string($config) ? $config : ($config['class'] ?? null);
 

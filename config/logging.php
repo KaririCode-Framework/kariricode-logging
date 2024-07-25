@@ -224,6 +224,17 @@ return [
             'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
             'handlers' => ['syslog'],
         ],
+        'slack' => [
+            'level' => ConfigHelper::env('LOG_LEVEL', 'critical'),
+            'handlers' => ['slack'],
+            'formatter' => [
+                'json' => [
+                    'with' => [
+                        'includeStacktraces' => true,
+                    ]
+                ]
+            ],
+        ],
         'custom' => [
             'handlers' => ['custom'],
         ],
@@ -255,6 +266,9 @@ return [
         'channel' => ConfigHelper::env('PERFORMANCE_LOG_CHANNEL', 'file'),
         'threshold' => ConfigHelper::env('PERFORMANCE_LOG_THRESHOLD', 1000), // in milliseconds
         'handlers' => [
+            'console' => [
+                'with' => ['useColors' => true],
+            ],
             'file' => [
                 'with' => ['filePath' => ConfigHelper::storagePath('logs/performance.log')],
             ],
@@ -299,6 +313,27 @@ return [
             'with' => [
                 'host' => '',
                 'port' => 0,
+            ],
+        ],
+        'slack' => [
+            'class' => \KaririCode\Logging\Handler\SlackHandler::class,
+            'with' => [
+                'slackClient' => \KaririCode\Logging\Util\SlackClient::create(
+                    ConfigHelper::env('LOG_SLACK_WEBHOOK_URL'),
+                    new \KaririCode\Logging\Resilience\CircuitBreaker(
+                        ConfigHelper::env('CIRCUIT_BREAKER_FAILURE_THRESHOLD', 3),
+                        ConfigHelper::env('CIRCUIT_BREAKER_RESET_TIMEOUT', 60)
+                    ),
+                    new \KaririCode\Logging\Resilience\Retry(
+                        ConfigHelper::env('RETRY_MAX_ATTEMPTS', 3),
+                        ConfigHelper::env('RETRY_DELAY', 1000),
+                        ConfigHelper::env('RETRY_MULTIPLIER', 2),
+                        ConfigHelper::env('RETRY_JITTER', 100)
+                    ),
+                    new \KaririCode\Logging\Resilience\Fallback(),
+                    new \KaririCode\Logging\Util\CurlClient()
+                ),
+                'minLevel' => LogLevel::CRITICAL,
             ],
         ],
         'custom' => [

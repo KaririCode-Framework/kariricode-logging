@@ -32,14 +32,24 @@ class LoggerFactory
         return new LoggerManager($name, $handlers, $processors, $formatter);
     }
 
-    public function createQueryLogger(): Logger
-    {
-        return $this->createLogger('query');
-    }
-
     public function createPerformanceLogger(): Logger
     {
-        return $this->createLogger('performance');
+        /** @var LoggerManager $logger */
+        $logger = $this->createLogger('performance');
+        $threshold = $this->config->get('performance.threshold', 1000);
+        $logger->setThreshold('execution_time', $threshold);
+
+        return $logger;
+    }
+
+    public function createQueryLogger(): Logger
+    {
+        /** @var LoggerManager $logger */
+        $logger = $this->createLogger('query');
+        $threshold = $this->config->get('query.threshold', 100);
+        $logger->setThreshold('time', $threshold);
+
+        return $logger;
     }
 
     public function createErrorLogger(): Logger

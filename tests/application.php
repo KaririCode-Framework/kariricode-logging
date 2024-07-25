@@ -44,10 +44,16 @@ if ($asyncLogger) {
 }
 
 $queryLogger = $loggerRegistry->getLogger('query');
-$queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => [], 'time' => 150]);
+$queryLogger->info('Executing a query', ['time' => 90, 'query' => 'SELECT * FROM users', 'bindings' => []]);
 
-// $performanceLogger = $loggerRegistry->getLogger('performance');
-// $performanceLogger->debug('Performance logging', ['additional_context' => 'example']);
+$queryLogger = $loggerRegistry->getLogger('query');
+$queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => []]);
+
+$performanceLogger = $loggerRegistry->getLogger('performance');
+$performanceLogger->debug('Performance logging', ['execution_time' => 100, 'additional_context' => 'example']);
+
+$performanceLogger = $loggerRegistry->getLogger('performance');
+$performanceLogger->debug('Performance logging', ['additional_context' => 'example']);
 
 // // // Testa o error logger
 // // if (LoggerRegistry::getLogger('error')) {

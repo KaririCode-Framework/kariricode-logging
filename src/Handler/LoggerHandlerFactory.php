@@ -31,7 +31,6 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
     public function createHandlers(string $handlerName): array
     {
         $handlersConfig = $this->getHandlersConfig($handlerName);
-
         $handlers = [];
         foreach ($handlersConfig as $key => $value) {
             [$handlerName, $handlerOptions] = $this->extractMergedConfig($key, $value);
@@ -41,28 +40,37 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
         return $handlers;
     }
 
-    private function getHandlersConfig(string $channelName): array
+    private function getHandlersConfig(string $handlerName): array
     {
-        $channelHandlerConfig = $this->getChannelHandlersConfig($channelName);
-        $optionalHandlerConfig = $this->getOptionalHandlersConfig($channelName);
+        $channelHandlerConfig = $this->getChannelHandlersConfig($handlerName);
+        $optionalHandlerConfig = $this->getOptionalHandlersConfig($handlerName);
 
         return $channelHandlerConfig ?? $optionalHandlerConfig ?? [];
     }
 
-    private function getChannelHandlersConfig(string $channelName): ?array
+    private function getChannelHandlersConfig(string $handlerName): ?array
     {
         $channelConfigs = $this->config->get('channels', []);
 
-        return $channelConfigs[$channelName]['handlers'] ?? null;
+        return $channelConfigs[$handlerName]['handlers'] ?? null;
     }
 
-    private function getOptionalHandlersConfig(string $channelName): ?array
+    private function getOptionalHandlersConfig(string $handlerName): ?array
     {
-        $optionalHandlerConfigs = $this->config->get($channelName, []);
+        $optionalHandlerConfigs = $this->config->get($handlerName, []);
+
+        if (!self::isOptionalHandlerEnabled($optionalHandlerConfigs)) {
+            return [];
+        }
 
         return $optionalHandlerConfigs['handlers'] ?? $this->getChannelHandlersConfig(
             $optionalHandlerConfigs['channel'] ?? 'file'
         );
+    }
+
+    private static function isOptionalHandlerEnabled(array $optionalHandlerConfigs): bool
+    {
+        return isset($optionalHandlerConfigs['enabled']) && $optionalHandlerConfigs['enabled'];
     }
 
     private function createHandler(string $handlerName, array $handlerOptions): LogHandler

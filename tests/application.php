@@ -26,15 +26,16 @@ $serviceProvider = new LoggerServiceProvider(
 
 $serviceProvider->register();
 
-// $defaultLogger = $loggerRegistry->getLogger('console');
-// $defaultLogger->debug('This is a debug message');
-// $defaultLogger->info('This is an info message');
-// $defaultLogger->notice('This is a notice message', ['context' => 'notice']);
-// $defaultLogger->warning('This is a warning message', ['context' => 'warning']);
-// $defaultLogger->error('This is an error message', ['context' => 'error']);
-// $defaultLogger->critical('This is a critical message', ['context' => 'critical']);
-// $defaultLogger->alert('This is an alert message', ['context' => 'alert']);
-// $defaultLogger->emergency('This is an emergency message', ['context' => 'emergency']);
+$defaultLogger = $loggerRegistry->getLogger('console');
+
+$defaultLogger->debug('User email is john.doe@example.com');
+$defaultLogger->info('User IP is 192.168.1.1');
+$defaultLogger->notice('User credit card number is 1234-5678-1234-5678', ['context' => 'credit card']);
+$defaultLogger->warning('User phone number is (11) 91234-7890', ['context' => 'phone']);
+$defaultLogger->error('This is an error message with email john.doe@example.com', ['context' => 'error']);
+$defaultLogger->critical('This is a critical message with IP 192.168.1.1', ['context' => 'critical']);
+$defaultLogger->alert('This is an alert message with credit card 1234-5678-1234-5678', ['context' => 'alert']);
+$defaultLogger->emergency('This is an emergency message with phone number 123-456-7890', ['context' => 'emergency']);
 
 // $asyncLogger = $loggerRegistry->getLogger('async');
 // if ($asyncLogger) {
@@ -49,44 +50,11 @@ $serviceProvider->register();
 // $queryLogger = $loggerRegistry->getLogger('query');
 // $queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => []]);
 
-$performanceLogger = $loggerRegistry->getLogger('performance');
-$performanceLogger->debug('Performance logging', ['execution_time' => 1000, 'additional_context' => 'example']);
+// $performanceLogger = $loggerRegistry->getLogger('performance');
+// $performanceLogger->debug('Performance logging', ['execution_time' => 1000, 'additional_context' => 'example']);
 
 // $performanceLogger = $loggerRegistry->getLogger('performance');
 // $performanceLogger->debug('Performance logging');
 
-// // // Testa o error logger
-// // if (LoggerRegistry::getLogger('error')) {
-// //     $errorLogger = LoggerRegistry::getLogger('error');
-// //     $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
-// // }
-
-// // // Exemplo de registro de um log de emergência
-// // $emergencyLogger = LoggerRegistry::getLogger('emergency');
-// // $emergencyLogger->emergency('This is an emergency message.');
-
-// // // Exemplo de registro de um log com processador de introspecção
-// // $defaultLogger->info('Testing introspection processor.');
-
-// // // Exemplo de registro de um log com processador de memória
-// // $defaultLogger->debug('Testing memory usage processor.', ['memory_usage' => memory_get_usage(true)]);
-
-// // // Exemplo de registro de um log com processador de Git
-// // $defaultLogger->info('Testing Git processor.', ['branch' => 'main', 'commit' => '1234567890abcdef']);
-
-// // // Exemplo de registro de um log com processador Web
-// // $_SERVER['REQUEST_URI'] = '/test-uri';
-// // $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
-// // $_SERVER['REQUEST_METHOD'] = 'GET';
-// // $_SERVER['SERVER_NAME'] = 'localhost';
-// // $_SERVER['HTTP_REFERER'] = 'http://localhost/referrer';
-
-// // $defaultLogger->info('Testing web processor.', [
-// //     'url' => ($_SERVER['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/'),
-// //     'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-// //     'http_method' => $_SERVER['REQUEST_METHOD'] ?? null,
-// //     'server' => $_SERVER['SERVER_NAME'] ?? null,
-// //     'referrer' => $_SERVER['HTTP_REFERER'] ?? null,
-// // ]);
-
-// // echo "All loggers tested successfully.\n";
+// $errorLogger = $loggerRegistry->getLogger('error');
+// $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);

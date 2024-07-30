@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Contract\Logging;
+namespace KaririCode\Logging\Contract;
 
 use KaririCode\Logging\LoggerConfiguration;
 

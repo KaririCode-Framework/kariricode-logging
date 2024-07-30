@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace KaririCode\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogHandler;
-use KaririCode\Logging\Contract\Logging\LoggerConfigurableFactory;
+use KaririCode\Logging\Contract\LoggerConfigurableFactory;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\Util\ReflectionFactoryTrait;
@@ -80,9 +80,9 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
         $handlerConfig = $this->getHandlerConfig($handlerName, $handlerOptions);
 
         $channelConfig = $this->config->get("channels.$handlerName", []);
-        $levelConfig = ['minLevel' => $channelConfig['level'] ?? LogLevel::DEBUG];
+        $handlerConfig['minLevel'] = LogLevel::from($channelConfig['minLevel'] ?? LogLevel::DEBUG->value);
 
-        return $this->createInstance($handlerClass, $handlerConfig, $levelConfig);
+        return $this->createInstance($handlerClass, $handlerConfig);
     }
 
     private function getHandlerConfig(string $handlerName, array $handlerOptions): array

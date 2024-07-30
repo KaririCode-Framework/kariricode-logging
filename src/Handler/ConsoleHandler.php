@@ -28,6 +28,10 @@ class ConsoleHandler extends AbstractHandler
 
     public function handle(ImmutableValue $record): void
     {
+        if (!$this->isHandling($record)) {
+            return;
+        }
+
         $message = $this->formatter->format($record);
         if ($this->useColors) {
             $message = $this->colorFormatter->format($record->level, $message);

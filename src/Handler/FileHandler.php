@@ -10,7 +10,7 @@ class FileHandler extends AbstractFileHandler
 {
     public function handle(ImmutableValue $record): void
     {
-        if ($record->level->value < $this->minLevel->value) {
+        if (!$this->isHandling($record)) {
             return;
         }
 

@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Util;
 use KaririCode\Logging\Util\ConfigLoader\EnvLoader;
 use KaririCode\Logging\Util\ConfigLoader\EnvParser;
 
-class ConfigHelper
+class Config
 {
     private static ?EnvLoader $envLoader = null;
     private static ?EnvParser $envParser = null;

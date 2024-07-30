@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace KaririCode\Logging\Formatter;
 
 use KaririCode\Contract\Logging\LogFormatter;
-use KaririCode\Logging\Contract\Logging\LoggerConfigurableFactory;
+use KaririCode\Logging\Contract\LoggerConfigurableFactory;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\Util\ReflectionFactoryTrait;
 

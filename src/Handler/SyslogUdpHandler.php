@@ -40,6 +40,10 @@ class SyslogUdpHandler extends AbstractHandler
 
     public function handle(ImmutableValue $record): void
     {
+        if (!$this->isHandling($record)) {
+            return;
+        }
+
         $message = $this->formatter->format($record);
         $packet = '<' . $this->getSyslogPriority($record->level) . '>' . $message;
 

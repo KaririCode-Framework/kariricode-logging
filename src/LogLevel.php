@@ -35,4 +35,18 @@ enum LogLevel: string implements LoggingLogLevel
             self::DEBUG => 100,
         };
     }
+
+    public function getColor(): string
+    {
+        return match ($this) {
+            self::DEBUG => "\033[0;37m", // Light gray
+            self::INFO => "\033[0;32m",  // Green
+            self::NOTICE => "\033[1;34m", // Light blue
+            self::WARNING => "\033[1;33m", // Yellow
+            self::ERROR => "\033[0;31m", // Red
+            self::CRITICAL => "\033[1;35m", // Magenta
+            self::ALERT => "\033[1;31m", // Light red
+            self::EMERGENCY => "\033[1;37m\033[41m", // White on red background
+        };
+    }
 }

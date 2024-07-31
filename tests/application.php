@@ -6,10 +6,10 @@ use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
 use KaririCode\Logging\Service\LoggerServiceProvider;
-use KaririCode\Logging\Util\ConfigHelper;
+use KaririCode\Logging\Util\Config;
 
 // Carrega o arquivo .env
-ConfigHelper::loadEnv();
+Config::loadEnv();
 
 // Inicialização e execução da aplicação
 $configPath = __DIR__ . '/../config/logging.php';

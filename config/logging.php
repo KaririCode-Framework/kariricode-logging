@@ -140,7 +140,8 @@ return [
             'class' => \KaririCode\Logging\Handler\SlackHandler::class,
             'with' => [
                 'slackClient' => \KaririCode\Logging\Util\SlackClient::create(
-                    Config::env('LOG_SLACK_WEBHOOK_URL'),
+                    Config::env('SLACK_BOT_TOKEN'),
+                    Config::env('SLACK_CHANNEL', '#logs'),
                     new \KaririCode\Logging\Resilience\CircuitBreaker(
                         Config::env('CIRCUIT_BREAKER_FAILURE_THRESHOLD', 3),
                         Config::env('CIRCUIT_BREAKER_RESET_TIMEOUT', 60)

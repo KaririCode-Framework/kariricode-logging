@@ -13,15 +13,12 @@ use KaririCode\Logging\Util\SlackClient;
 
 class SlackHandler extends AbstractHandler
 {
-    private SlackClient $slackClient;
-
     public function __construct(
-        SlackClient $slackClient,
-        LoggingLogLevel $minLevel = LogLevel::CRITICAL,
-        protected LogFormatter $formatter = new LineFormatter()
+        private SlackClient $slackClient,
+        protected LoggingLogLevel $minLevel = LogLevel::CRITICAL,
+        protected LogFormatter $formatter = new LineFormatter(),
     ) {
         parent::__construct($minLevel, $formatter);
-        $this->slackClient = $slackClient;
     }
 
     public function handle(ImmutableValue $record): void

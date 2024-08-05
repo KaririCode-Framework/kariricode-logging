@@ -26,25 +26,6 @@ class CurlClient
     }
 
     /**
-     * Initialize a new cURL session.
-     *
-     * @param string $url the URL to initialize the cURL session with
-     *
-     * @throws \RuntimeException if cURL initialization fails
-     *
-     * @return \CurlHandle the cURL handle
-     */
-    private function initializeCurl(string $url): \CurlHandle
-    {
-        $ch = curl_init($url);
-        if (false === $ch) {
-            throw new \RuntimeException('Failed to initialize cURL');
-        }
-
-        return $ch;
-    }
-
-    /**
      * Set POST options for the cURL session.
      *
      * @param \CurlHandle $ch the cURL handle
@@ -64,10 +45,29 @@ class CurlClient
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => array_merge(self::DEFAULT_HEADERS, $headers),
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => self::TIMEOUT,
         ]);
+    }
+
+    /**
+     * Initialize a new cURL session.
+     *
+     * @param string $url the URL to initialize the cURL session with
+     *
+     * @throws \RuntimeException if cURL initialization fails
+     *
+     * @return \CurlHandle the cURL handle
+     */
+    private function initializeCurl(string $url): \CurlHandle
+    {
+        $ch = curl_init($url);
+        if (false === $ch) {
+            throw new \RuntimeException('Failed to initialize cURL');
+        }
+
+        return $ch;
     }
 
     /**

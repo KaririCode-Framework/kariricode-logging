@@ -1,3 +1,1 @@
-<?php
-
-return ['key' => 'value'];
+<?php return ['key' => 'value'];

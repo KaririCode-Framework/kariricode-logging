@@ -4,21 +4,19 @@ namespace KaririCode\Logging\Processor;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Logging\LogRecord;
+use KaririCode\Logging\Util\Http\Contract\HttpRequest;
+use KaririCode\Logging\Util\Http\ServerHttpRequest;
 
 class WebProcessor extends AbstractProcessor
 {
+    public function __construct(
+        private HttpRequest $request = new ServerHttpRequest()
+    ) {
+    }
+
     public function process(ImmutableValue $record): ImmutableValue
     {
-        $server = $_SERVER;
-        $context = array_merge($record->context, [
-            'url' => ($server['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' .
-                     ($server['HTTP_HOST'] ?? 'localhost') .
-                     ($server['REQUEST_URI'] ?? '/'),
-            'ip' => $server['REMOTE_ADDR'] ?? null,
-            'http_method' => $server['REQUEST_METHOD'] ?? null,
-            'server' => $server['SERVER_NAME'] ?? null,
-            'referrer' => $server['HTTP_REFERER'] ?? null,
-        ]);
+        $context = $this->buildContext($record->context);
 
         return new LogRecord(
             $record->level,
@@ -27,5 +25,16 @@ class WebProcessor extends AbstractProcessor
             $record->datetime,
             $record->extra
         );
+    }
+
+    private function buildContext(array $existingContext): array
+    {
+        return array_merge($existingContext, [
+            'url' => $this->request->getUrl(),
+            'ip' => $this->request->getIp(),
+            'http_method' => $this->request->getMethod(),
+            'server' => $this->request->getServerName(),
+            'referrer' => $this->request->getReferrer(),
+        ]);
     }
 }

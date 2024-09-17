@@ -10,7 +10,6 @@ use KaririCode\Logging\LogRecord;
 
 class MetricsProcessor implements LogProcessor
 {
-    /** @var LogProcessor[] */
     private array $processors;
 
     public function __construct(array $processors)
@@ -18,9 +17,6 @@ class MetricsProcessor implements LogProcessor
         $this->processors = $processors;
     }
 
-    /**
-     * @param LogRecord $record
-     */
     public function process(ImmutableValue $record): ImmutableValue
     {
         foreach ($this->processors as $processor) {

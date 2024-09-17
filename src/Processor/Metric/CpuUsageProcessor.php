@@ -10,9 +10,6 @@ use KaririCode\Logging\Processor\AbstractProcessor;
 
 class CpuUsageProcessor extends AbstractProcessor
 {
-    /**
-     * @param LogRecord $record
-     */
     public function process(ImmutableValue $record): ImmutableValue
     {
         $cpuUsage = sys_getloadavg()[0];

@@ -19,6 +19,11 @@ class EncryptionProcessor extends AbstractProcessor
     {
         $encryptedMessage = $this->encryptor->encrypt($record->message);
 
-        return new LogRecord($record->level, $encryptedMessage, $record->context, $record->datetime);
+        return new LogRecord(
+            $record->level,
+            $encryptedMessage,
+            $record->context,
+            $record->datetime
+        );
     }
 }

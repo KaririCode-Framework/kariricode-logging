@@ -14,9 +14,6 @@ class ExecutionTimeProcessor extends AbstractProcessor
     {
     }
 
-    /**falta cibnfi
-     * @param LogRecord $record
-     */
     public function process(ImmutableValue $record): ImmutableValue
     {
         $executionTime = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) * 1000; // Convert to milliseconds

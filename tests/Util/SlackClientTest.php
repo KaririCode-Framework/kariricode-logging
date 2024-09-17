@@ -23,13 +23,18 @@ final class SlackClientTest extends TestCase
 
     protected function setUp(): void
     {
+        /** @var CircuitBreaker */
         $this->circuitBreaker = $this->createMock(CircuitBreaker::class);
+        /** @var Retry */
         $this->retry = $this->createMock(Retry::class);
+        /** @var Fallback */
         $this->fallback = $this->createMock(Fallback::class);
+        /** @var CurlClient */
         $this->curlClient = $this->createMock(CurlClient::class);
 
         $this->slackClient = new SlackClient(
-            'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
+            'fake_bot_token',
+            '#general',
             $this->circuitBreaker,
             $this->retry,
             $this->fallback,
@@ -40,15 +45,21 @@ final class SlackClientTest extends TestCase
     public function testSendMessageSuccess(): void
     {
         $message = 'Test message';
-        $payload = ['text' => $message];
+        $payload = ['channel' => '#general', 'text' => $message];
         $response = ['status' => 200, 'body' => '{"ok": true}'];
 
         $this->circuitBreaker->expects($this->once())->method('isOpen')->willReturn(false);
         $this->circuitBreaker->expects($this->once())->method('recordSuccess');
+
         $this->curlClient->expects($this->once())->method('post')->with(
-            $this->slackClient->getWebhookUrl(),
-            $payload
+            'https://slack.com/api/chat.postMessage', // Hardcoded URL
+            $payload,
+            $this->callback(function ($headers) {
+                return in_array('Content-Type: application/json; charset=utf-8', $headers, true)
+                    && in_array('Authorization: Bearer fake_bot_token', $headers, true);
+            })
         )->willReturn($response);
+
         $this->retry->expects($this->once())->method('execute')->willReturnCallback(function ($callback) {
             return $callback();
         });
@@ -78,13 +89,14 @@ final class SlackClientTest extends TestCase
     public function testSendMessageCurlClientThrowsJsonException(): void
     {
         $message = 'Test message';
-        $payload = ['text' => $message];
+        $payload = ['channel' => '#general', 'text' => $message];
 
         $this->circuitBreaker->expects($this->once())->method('isOpen')->willReturn(false);
         $this->circuitBreaker->expects($this->once())->method('recordFailure');
         $this->curlClient->expects($this->once())->method('post')->with(
-            $this->slackClient->getWebhookUrl(),
-            $payload
+            'https://slack.com/api/chat.postMessage',
+            $payload,
+            $this->anything()
         )->willThrowException(new \JsonException('JSON encoding error'));
 
         $this->retry->expects($this->once())->method('execute')->willReturnCallback(function ($callback) {
@@ -103,13 +115,14 @@ final class SlackClientTest extends TestCase
     public function testSendMessageCurlClientThrowsRuntimeException(): void
     {
         $message = 'Test message';
-        $payload = ['text' => $message];
+        $payload = ['channel' => '#general', 'text' => $message];
 
         $this->circuitBreaker->expects($this->once())->method('isOpen')->willReturn(false);
         $this->circuitBreaker->expects($this->once())->method('recordFailure');
         $this->curlClient->expects($this->once())->method('post')->with(
-            $this->slackClient->getWebhookUrl(),
-            $payload
+            'https://slack.com/api/chat.postMessage',
+            $payload,
+            $this->anything()
         )->willThrowException(new \RuntimeException('Curl error'));
 
         $this->retry->expects($this->once())->method('execute')->willReturnCallback(function ($callback) {

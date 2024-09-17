@@ -11,7 +11,7 @@ use KaririCode\Logging\Resilience\Retry;
 
 class SlackClient
 {
-    private const SLACK_API_URL = 'https://slack.com/api/chat.postMessage';
+    protected const SLACK_API_URL = 'https://slack.com/api/chat.postMessage';
 
     public function __construct(
         private string $botToken,

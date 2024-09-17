@@ -21,7 +21,8 @@ class EnvLoader
                 continue;
             }
             [$name, $value] = $this->parseEnvLine($line);
-            putenv(sprintf('%s=%s', $name, $value));
+            $sanitizedValue = $this->sanitizeValue($value);
+            putenv(sprintf('%s=%s', $name, $sanitizedValue));
         }
     }
 
@@ -49,5 +50,22 @@ class EnvLoader
         [$name, $value] = explode('=', $line, 2);
 
         return [trim($name), trim($value)];
+    }
+
+    private function sanitizeValue(string $value): string
+    {
+        // Remove any potentially harmful characters
+        $value = preg_replace('/[^a-zA-Z0-9_\-\.,@\/\\\\:;]/', '', $value);
+
+        // Ensure the value doesn't start with a dash (which could be interpreted as a command line option)
+        $value = ltrim($value, '-');
+
+        // Limit the length of the value to prevent buffer overflow attacks
+        $maxLength = 1000; // Adjust this value based on your requirements
+        if (strlen($value) > $maxLength) {
+            $value = substr($value, 0, $maxLength);
+        }
+
+        return $value;
     }
 }

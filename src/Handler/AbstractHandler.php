@@ -9,16 +9,15 @@ use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Contract\Logging\LogHandler;
 use KaririCode\Contract\Logging\LogLevel as LoggingLogLevel;
 use KaririCode\Contract\Logging\Structural\HandlerAware;
-use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\LogLevel;
 
 abstract class AbstractHandler implements LogHandler, HandlerAware
 {
     protected array $handlers = [];
+    protected LogFormatter $formatter;
 
     public function __construct(
         protected LoggingLogLevel $minLevel = LogLevel::DEBUG,
-        protected LogFormatter $formatter = new LineFormatter()
     ) {
     }
 

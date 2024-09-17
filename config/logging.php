@@ -5,6 +5,7 @@ use KaririCode\Logging\Util\Config;
 
 return [
     'default' => Config::env('LOG_CHANNEL', 'file'),
+    'timezone' => Config::env('LOG_TIMEZONE', 'UTC'),
     'channels' => [
         'file' => [
             'minLevel' => Config::env('LOG_LEVEL', 'debug'),

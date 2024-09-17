@@ -27,9 +27,9 @@ $serviceProvider = new LoggerServiceProvider(
 
 $serviceProvider->register();
 
-// $defaultLogger = $loggerRegistry->getLogger('console');
+$defaultLogger = $loggerRegistry->getLogger('console');
 
-// $defaultLogger->debug('User email is john.doe@example.com');
+$defaultLogger->debug('User email is john.doe@example.com');
 // $defaultLogger->info('User IP is 192.168.1.1');
 // $defaultLogger->notice('User credit card number is 1234-5678-1234-5678', ['context' => 'credit card']);
 // $defaultLogger->warning('User phone number is (11) 91234-7890', ['context' => 'phone']);
@@ -60,5 +60,5 @@ $serviceProvider->register();
 // $errorLogger = $loggerRegistry->getLogger('error');
 // $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
 
-$slackLogger = $loggerRegistry->getLogger('slack');
-$slackLogger->critical('Este é um teste de mensagem crítica enviada para o Slack');
+// $slackLogger = $loggerRegistry->getLogger('slack');
+// $slackLogger->critical('Este é um teste de mensagem crítica enviada para o Slack');

@@ -23,6 +23,7 @@ class ConsoleHandler extends AbstractHandler
     ) {
         parent::__construct($minLevel, $formatter);
         $this->output = fopen('php://stdout', 'w');
+        $this->setFormatter($formatter);
         $this->colorFormatter = new ConsoleColorFormatter();
     }
 

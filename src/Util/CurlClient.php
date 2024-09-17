@@ -7,7 +7,6 @@ namespace KaririCode\Logging\Util;
 class CurlClient
 {
     private const TIMEOUT = 30;
-    private const DEFAULT_HEADERS = ['Content-Type: application/json'];
 
     public function post(string $url, array $data, array $headers = []): array
     {

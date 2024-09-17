@@ -6,7 +6,6 @@ namespace KaririCode\Logging\Processor;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Contract\Logging\LogProcessor;
-use KaririCode\Logging\LogRecord;
 
 class MetricsProcessor implements LogProcessor
 {

@@ -20,6 +20,7 @@ class ServerHttpRequest implements HttpRequest
         $scheme = ($this->serverParams['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://';
         $host = $this->serverParams['HTTP_HOST'] ?? 'localhost';
         $uri = $this->serverParams['REQUEST_URI'] ?? '/';
+
         return $scheme . $host . $uri;
     }
 

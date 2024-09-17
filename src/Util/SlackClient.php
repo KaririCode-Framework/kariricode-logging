@@ -16,28 +16,20 @@ class SlackClient
     public function __construct(
         private string $botToken,
         private string $channel,
-        private CircuitBreaker $circuitBreaker,
-        private Retry $retry,
-        private Fallback $fallback,
-        private CurlClient $curlClient
+        private CircuitBreaker $circuitBreaker = new CircuitBreaker(3, 60),
+        private Retry $retry = new Retry(3, 1000, 2, 100),
+        private Fallback $fallback = new Fallback(),
+        private CurlClient $curlClient = new CurlClient()
     ) {
     }
 
     public static function create(
         string $botToken,
         string $channel,
-        ?CircuitBreaker $circuitBreaker = null,
-        ?Retry $retry = null,
-        ?Fallback $fallback = null,
-        ?CurlClient $curlClient = null
     ): self {
         return new self(
             $botToken,
-            $channel,
-            $circuitBreaker ?? new CircuitBreaker(3, 60),
-            $retry ?? new Retry(3, 1000, 2, 100),
-            $fallback ?? new Fallback(),
-            $curlClient ?? new CurlClient()
+            $channel
         );
     }
 

@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\Service;
+namespace Tests\KaririCode\Logging\Service;
 
 use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Exception\InvalidConfigurationException;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
@@ -17,7 +18,7 @@ class LoggerServiceProviderTest extends TestCase
     private LoggerConfiguration|MockObject $config;
     private LoggerFactory|MockObject $loggerFactory;
     private LoggerRegistry|MockObject $loggerRegistry;
-    private LoggerServiceProvider|MockObject $serviceProvider;
+    private LoggerServiceProvider $serviceProvider;
 
     protected function setUp(): void
     {
@@ -32,215 +33,179 @@ class LoggerServiceProviderTest extends TestCase
         );
     }
 
-    public function testRegisterAllLoggers(): void
+    public function testRegister(): void
     {
-        // Arrange
-        $configMap = [
-            ['default', null, 'default'],
-            ['channels', [], [
-                'default' => ['path' => '/var/log/default.log', 'level' => 'debug'],
-                'error' => ['path' => '/var/log/error.log', 'level' => 'error'],
-            ]],
-            ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
-            ['query_logger.enabled', false, true],
-            ['query_logger', [], ['path' => '/var/log/query.log', 'level' => 'debug']],
-            ['performance_logger.enabled', false, true],
-            ['performance_logger', [], ['path' => '/var/log/performance.log', 'level' => 'info']],
-            ['error_logger.enabled', true, true],
-            ['error_logger', [], ['path' => '/var/log/error.log', 'level' => 'error']],
-            ['async.enabled', true, true],
-            ['async.batch_size', 10, 10],
-        ];
-        $this->config->method('get')->willReturnMap($configMap);
-
-        $defaultLogger = $this->createMock(Logger::class);
-        $errorLogger = $this->createMock(Logger::class);
-        $emergencyLogger = $this->createMock(Logger::class);
-        $queryLogger = $this->createMock(Logger::class);
-        $performanceLogger = $this->createMock(Logger::class);
-        $asyncLogger = $this->createMock(Logger::class);
-
-        $this->loggerFactory->method('createLogger')
+        $this->config->method('get')
             ->willReturnMap([
-                ['default', ['path' => '/var/log/default.log', 'level' => 'debug'], $defaultLogger],
-                ['error', ['path' => '/var/log/error.log', 'level' => 'error'], $errorLogger],
-                ['emergency', ['path' => '/var/log/emergency.log', 'level' => 'emergency'], $emergencyLogger],
+                ['default', null, 'default_channel'],
+                ['channels', null, ['channel1' => [], 'channel2' => []]],
+                ['emergency_logger', [], []],
+                ['query', [], []],
+                ['performance', [], []],
+                ['error', [], []],
+                ['async.batch_size', 10, 10],
             ]);
 
-        $this->loggerFactory->method('createQueryLogger')
-            ->willReturn($queryLogger);
+        $mockLogger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createQueryLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createPerformanceLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createErrorLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createAsyncLogger')->willReturn($mockLogger);
 
-        $this->loggerFactory->method('createPerformanceLogger')
-            ->willReturn($performanceLogger);
+        $this->loggerRegistry->method('getLogger')->willReturn($mockLogger);
 
-        $this->loggerFactory->method('createErrorLogger')
-            ->willReturn($errorLogger);
+        $this->loggerRegistry->expects($this->atLeastOnce())
+            ->method('addLogger');
 
-        $this->loggerFactory->method('createAsyncLogger')
-            ->willReturn($asyncLogger);
+        $this->serviceProvider->register();
+    }
 
-        $expectedAddLoggerCalls = [
-            ['default', $defaultLogger],
-            ['default', $defaultLogger],
-            ['error', $errorLogger],
-            ['emergency', $emergencyLogger],
-            ['query', $queryLogger],
-            ['performance', $performanceLogger],
-            ['error', $errorLogger],
-            ['async', $asyncLogger],
-        ];
+    public function testRegisterThrowsExceptionWhenDefaultChannelIsMissing(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['default', null, null],
+                ['channels', null, ['channel1' => []]],
+            ]);
 
-        $this->loggerRegistry->expects($this->exactly(count($expectedAddLoggerCalls)))
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage("The 'default' and 'channels' configurations are required.");
+
+        $this->serviceProvider->register();
+    }
+
+    public function testRegisterThrowsExceptionWhenChannelsConfigIsMissing(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['default', null, 'default_channel'],
+                ['channels', null, null],
+            ]);
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage("The 'default' and 'channels' configurations are required.");
+
+        $this->serviceProvider->register();
+    }
+
+    public function testRegisterDefaultLoggers(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['default', null, 'default_channel'],
+                ['channels', null, ['channel1' => [], 'default_channel' => []]],
+            ]);
+
+        $logger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createLogger')->willReturn($logger);
+
+        $this->loggerRegistry->expects($this->exactly(3))
+            ->method('addLogger');
+
+        $method = new \ReflectionMethod(LoggerServiceProvider::class, 'registerDefaultLoggers');
+        $method->setAccessible(true);
+        $method->invoke($this->serviceProvider);
+    }
+
+    public function testRegisterEmergencyLogger(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['emergency_logger', [], ['config' => 'value']],
+            ]);
+
+        $emergencyLogger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createLogger')
+            ->with('emergency', ['config' => 'value'])
+            ->willReturn($emergencyLogger);
+
+        $this->loggerRegistry->expects($this->once())
             ->method('addLogger')
-            ->willReturnCallback(function ($channel, $logger) use (&$expectedAddLoggerCalls) {
-                $expectedCall = array_shift($expectedAddLoggerCalls);
-                $this->assertEquals($expectedCall[0], $channel);
-                $this->assertSame($expectedCall[1], $logger);
-            });
+            ->with('emergency', $emergencyLogger);
 
+        $method = new \ReflectionMethod(LoggerServiceProvider::class, 'registerEmergencyLogger');
+        $method->setAccessible(true);
+        $method->invoke($this->serviceProvider);
+    }
+
+    public function testRegisterOptionalLoggers(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['query', [], ['query_config' => 'value']],
+                ['performance', [], ['performance_config' => 'value']],
+                ['error', [], ['error_config' => 'value']],
+                ['async.batch_size', 10, 20],
+            ]);
+
+        $mockLogger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createQueryLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createPerformanceLogger')->willReturn($mockLogger);
+        $this->loggerFactory->method('createErrorLogger')->willReturn($mockLogger);
+
+        // Mock the getLogger method to return a Logger instance
+        $this->loggerRegistry->method('getLogger')
+            ->with('default')
+            ->willReturn($mockLogger);
+
+        // Expect createAsyncLogger to be called with a Logger instance and batch size
+        $this->loggerFactory->expects($this->once())
+            ->method('createAsyncLogger')
+            ->with($this->isInstanceOf(Logger::class), 20)
+            ->willReturn($mockLogger);
+
+        $this->loggerRegistry->expects($this->exactly(4))
+            ->method('addLogger');
+
+        $method = new \ReflectionMethod(LoggerServiceProvider::class, 'registerOptionalLoggers');
+        $method->setAccessible(true);
+        $method->invoke($this->serviceProvider);
+    }
+
+    public function testRegisterLogger(): void
+    {
+        $this->config->method('get')
+            ->willReturnMap([
+                ['test_logger', [], ['config' => 'value']],
+            ]);
+
+        $logger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createQueryLogger')
+            ->with(['config' => 'value'])
+            ->willReturn($logger);
+
+        $this->loggerRegistry->expects($this->once())
+            ->method('addLogger')
+            ->with('test_logger', $logger);
+
+        $method = new \ReflectionMethod(LoggerServiceProvider::class, 'registerLogger');
+        $method->setAccessible(true);
+        $method->invoke($this->serviceProvider, 'test_logger', 'createQueryLogger');
+    }
+
+    public function testRegisterAsyncLoggerIfEnabled(): void
+    {
+        $defaultLogger = $this->createMock(Logger::class);
         $this->loggerRegistry->method('getLogger')
             ->with('default')
             ->willReturn($defaultLogger);
 
-        // Act
-        $this->serviceProvider->register();
+        $this->config->method('get')
+            ->with('async.batch_size', 10)
+            ->willReturn(20);
 
-        // Assert
-        $this->assertEmpty($expectedAddLoggerCalls, 'Not all expected addLogger calls were made');
-    }
+        $asyncLogger = $this->createMock(Logger::class);
+        $this->loggerFactory->method('createAsyncLogger')
+            ->with($defaultLogger, 20)
+            ->willReturn($asyncLogger);
 
-    public function testRegisterWithoutOptionalLoggers(): void
-    {
-        // Arrange
-        $configMap = [
-            ['default', null, 'default'],
-            ['channels', [], [
-                'default' => ['path' => '/var/log/default.log', 'level' => 'debug'],
-                'error' => ['path' => '/var/log/error.log', 'level' => 'error'],
-            ]],
-            ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
-            ['query_logger.enabled', false, false],
-            ['performance_logger.enabled', false, false],
-            ['error_logger.enabled', true, false],
-            ['async.enabled', true, false],
-        ];
-        $this->config->method('get')->willReturnMap($configMap);
-
-        $defaultLogger = $this->createMock(Logger::class);
-        $errorLogger = $this->createMock(Logger::class);
-        $emergencyLogger = $this->createMock(Logger::class);
-
-        $this->loggerFactory->method('createLogger')
-            ->willReturnMap([
-                ['default', ['path' => '/var/log/default.log', 'level' => 'debug'], $defaultLogger],
-                ['error', ['path' => '/var/log/error.log', 'level' => 'error'], $errorLogger],
-                ['emergency', ['path' => '/var/log/emergency.log', 'level' => 'emergency'], $emergencyLogger],
-            ]);
-
-        $expectedAddLoggerCalls = [
-            ['default', $defaultLogger],
-            ['default', $defaultLogger],
-            ['error', $errorLogger],
-            ['emergency', $emergencyLogger],
-        ];
-
-        $this->loggerRegistry->expects($this->exactly(count($expectedAddLoggerCalls)))
+        $this->loggerRegistry->expects($this->once())
             ->method('addLogger')
-            ->willReturnCallback(function ($channel, $logger) use (&$expectedAddLoggerCalls) {
-                $expectedCall = array_shift($expectedAddLoggerCalls);
-                $this->assertEquals($expectedCall[0], $channel);
-                $this->assertSame($expectedCall[1], $logger);
-            });
+            ->with('async', $asyncLogger);
 
-        // Act
-        $this->serviceProvider->register();
-
-        // Assert
-        $this->assertEmpty($expectedAddLoggerCalls, 'Not all expected addLogger calls were made');
-    }
-
-    public function testRegisterWithoutDefaultChannel(): void
-    {
-        // Arrange
-        $configMap = [
-            ['default', null, null],
-            ['channels', [], [
-                'custom' => ['path' => '/var/log/custom.log', 'level' => 'debug'],
-            ]],
-            ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
-            ['query_logger.enabled', false, false],
-            ['performance_logger.enabled', false, false],
-            ['error_logger.enabled', true, false],
-            ['async.enabled', true, false],
-        ];
-        $this->config->method('get')->willReturnMap($configMap);
-
-        $customLogger = $this->createMock(Logger::class);
-        $emergencyLogger = $this->createMock(Logger::class);
-
-        $this->loggerFactory->method('createLogger')
-            ->willReturnMap([
-                ['custom', ['path' => '/var/log/custom.log', 'level' => 'debug'], $customLogger],
-                ['emergency', ['path' => '/var/log/emergency.log', 'level' => 'emergency'], $emergencyLogger],
-            ]);
-
-        $expectedAddLoggerCalls = [
-            ['custom', $customLogger],
-            ['emergency', $emergencyLogger],
-        ];
-
-        $this->loggerRegistry->expects($this->exactly(count($expectedAddLoggerCalls)))
-            ->method('addLogger')
-            ->willReturnCallback(function ($channel, $logger) use (&$expectedAddLoggerCalls) {
-                $expectedCall = array_shift($expectedAddLoggerCalls);
-                $this->assertEquals($expectedCall[0], $channel);
-                $this->assertSame($expectedCall[1], $logger);
-            });
-
-        // Act
-        $this->serviceProvider->register();
-
-        // Assert
-        $this->assertEmpty($expectedAddLoggerCalls, 'Not all expected addLogger calls were made');
-    }
-
-    public function testRegisterWithEmptyChannels(): void
-    {
-        // Arrange
-        $configMap = [
-            ['default', null, null],
-            ['channels', [], []],
-            ['emergency_logger', [], ['path' => '/var/log/emergency.log', 'level' => 'emergency']],
-            ['query_logger.enabled', false, false],
-            ['performance_logger.enabled', false, false],
-            ['error_logger.enabled', true, false],
-            ['async.enabled', true, false],
-        ];
-        $this->config->method('get')->willReturnMap($configMap);
-
-        $emergencyLogger = $this->createMock(Logger::class);
-
-        $this->loggerFactory->method('createLogger')
-            ->willReturnMap([
-                ['emergency', ['path' => '/var/log/emergency.log', 'level' => 'emergency'], $emergencyLogger],
-            ]);
-
-        $expectedAddLoggerCalls = [
-            ['emergency', $emergencyLogger],
-        ];
-
-        $this->loggerRegistry->expects($this->exactly(count($expectedAddLoggerCalls)))
-            ->method('addLogger')
-            ->willReturnCallback(function ($channel, $logger) use (&$expectedAddLoggerCalls) {
-                $expectedCall = array_shift($expectedAddLoggerCalls);
-                $this->assertEquals($expectedCall[0], $channel);
-                $this->assertSame($expectedCall[1], $logger);
-            });
-
-        // Act
-        $this->serviceProvider->register();
-
-        // Assert
-        $this->assertEmpty($expectedAddLoggerCalls, 'Not all expected addLogger calls were made');
+        $method = new \ReflectionMethod(LoggerServiceProvider::class, 'registerAsyncLoggerIfEnabled');
+        $method->setAccessible(true);
+        $method->invoke($this->serviceProvider);
     }
 }

@@ -2,51 +2,130 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\Logger;
+namespace Tests\KaririCode\Logging;
 
 use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Decorator\AsyncLogger;
+use KaririCode\Logging\Formatter\LoggerFormatterFactory;
+use KaririCode\Logging\Handler\LoggerHandlerFactory;
+use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
-use KaririCode\Logging\LogLevel;
+use KaririCode\Logging\LoggerManager;
+use KaririCode\Logging\Processor\LoggerProcessorFactory;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class LoggerFactoryTest extends TestCase
 {
-    private LoggerFactory $factory;
+    private LoggerConfiguration|MockObject $config;
+    private LoggerHandlerFactory|MockObject $handlerFactory;
+    private LoggerProcessorFactory|MockObject $processorFactory;
+    private LoggerFormatterFactory|MockObject $formatterFactory;
+    private LoggerFactory $loggerFactory;
 
     protected function setUp(): void
     {
-        $this->factory = new LoggerFactory();
+        $this->config = $this->createMock(LoggerConfiguration::class);
+        $this->handlerFactory = $this->createMock(LoggerHandlerFactory::class);
+        $this->processorFactory = $this->createMock(LoggerProcessorFactory::class);
+        $this->formatterFactory = $this->createMock(LoggerFormatterFactory::class);
+
+        $this->loggerFactory = new LoggerFactory(
+            $this->config,
+            $this->handlerFactory,
+            $this->processorFactory,
+            $this->formatterFactory
+        );
     }
 
     public function testCreateLogger(): void
     {
-        $config = [
-            'path' => '/var/log/app.log',
-            'level' => LogLevel::DEBUG,
-        ];
+        $channelName = 'test_channel';
 
-        $logger = $this->factory->createLogger('test', $config);
+        $this->handlerFactory->expects($this->once())
+            ->method('createHandlers')
+            ->with($channelName)
+            ->willReturn([]);
+
+        $this->processorFactory->expects($this->once())
+            ->method('createProcessors')
+            ->with($channelName)
+            ->willReturn([]);
+
+        $this->formatterFactory->expects($this->once())
+            ->method('createFormatter')
+            ->with($channelName)
+            ->willReturn($this->createMock(\KaririCode\Contract\Logging\LogFormatter::class));
+
+        $logger = $this->loggerFactory->createLogger($channelName);
 
         $this->assertInstanceOf(Logger::class, $logger);
+        $this->assertInstanceOf(LoggerManager::class, $logger);
+    }
+
+    public function testCreatePerformanceLogger(): void
+    {
+        $this->config->expects($this->once())
+            ->method('get')
+            ->with('performance.threshold', 1000)
+            ->willReturn(500);
+
+        $this->handlerFactory->method('createHandlers')->willReturn([]);
+        $this->processorFactory->method('createProcessors')->willReturn([]);
+        $this->formatterFactory->method('createFormatter')->willReturn($this->createMock(\KaririCode\Contract\Logging\LogFormatter::class));
+
+        $logger = $this->loggerFactory->createPerformanceLogger();
+
+        $this->assertInstanceOf(Logger::class, $logger);
+        $this->assertInstanceOf(LoggerManager::class, $logger);
     }
 
     public function testCreateQueryLogger(): void
     {
-        $config = [
-            'path' => '/var/log/query.log',
-            'level' => LogLevel::INFO,
-        ];
+        $this->config->expects($this->once())
+            ->method('get')
+            ->with('query.threshold', 100)
+            ->willReturn(50);
 
-        $logger = $this->factory->createQueryLogger($config);
+        $this->handlerFactory->method('createHandlers')->willReturn([]);
+        $this->processorFactory->method('createProcessors')->willReturn([]);
+        $this->formatterFactory->method('createFormatter')->willReturn($this->createMock(\KaririCode\Contract\Logging\LogFormatter::class));
+
+        $logger = $this->loggerFactory->createQueryLogger();
 
         $this->assertInstanceOf(Logger::class, $logger);
+        $this->assertInstanceOf(LoggerManager::class, $logger);
+    }
+
+    public function testCreateErrorLogger(): void
+    {
+        $this->handlerFactory->method('createHandlers')->willReturn([]);
+        $this->processorFactory->method('createProcessors')->willReturn([]);
+        $this->formatterFactory->method('createFormatter')->willReturn($this->createMock(\KaririCode\Contract\Logging\LogFormatter::class));
+
+        $logger = $this->loggerFactory->createErrorLogger();
+
+        $this->assertInstanceOf(Logger::class, $logger);
+        $this->assertInstanceOf(LoggerManager::class, $logger);
     }
 
     public function testCreateAsyncLogger(): void
     {
-        $mockLogger = $this->createMock(Logger::class);
-        $asyncLogger = $this->factory->createAsyncLogger($mockLogger, 10);
+        $baseLogger = $this->createMock(Logger::class);
+        $batchSize = 10;
 
-        $this->assertInstanceOf(Logger::class, $asyncLogger);
+        $asyncLogger = $this->loggerFactory->createAsyncLogger($baseLogger, $batchSize);
+
+        $this->assertInstanceOf(AsyncLogger::class, $asyncLogger);
+    }
+
+    public function testCreateLoggerWithInvalidChannel(): void
+    {
+        $this->handlerFactory->method('createHandlers')->willThrowException(new \InvalidArgumentException('Invalid channel'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid channel');
+
+        $this->loggerFactory->createLogger('invalid_channel');
     }
 }

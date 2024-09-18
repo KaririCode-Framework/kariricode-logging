@@ -25,9 +25,13 @@ class LoggerFactoryTest extends TestCase
 
     protected function setUp(): void
     {
+        /** @var LoggerConfiguration */
         $this->config = $this->createMock(LoggerConfiguration::class);
+        /** @var LoggerHandlerFactory */
         $this->handlerFactory = $this->createMock(LoggerHandlerFactory::class);
+        /** @var LoggerProcessorFactory */
         $this->processorFactory = $this->createMock(LoggerProcessorFactory::class);
+        /** @var LoggerFormatterFactory */
         $this->formatterFactory = $this->createMock(LoggerFormatterFactory::class);
 
         $this->loggerFactory = new LoggerFactory(
@@ -111,10 +115,14 @@ class LoggerFactoryTest extends TestCase
 
     public function testCreateAsyncLogger(): void
     {
+        /** @var Logger */
         $baseLogger = $this->createMock(Logger::class);
         $batchSize = 10;
 
-        $asyncLogger = $this->loggerFactory->createAsyncLogger($baseLogger, $batchSize);
+        $asyncLogger = $this->loggerFactory->createAsyncLogger(
+            $baseLogger,
+            $batchSize
+        );
 
         $this->assertInstanceOf(AsyncLogger::class, $asyncLogger);
     }

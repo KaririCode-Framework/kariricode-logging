@@ -13,7 +13,7 @@ use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class SyslogUdpHandlerTest extends TestCase
+final class SyslogUdpHandlerTest extends TestCase
 {
     private string $host = '127.0.0.1';
     private int $port = 514;

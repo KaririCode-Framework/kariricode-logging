@@ -12,7 +12,7 @@ use KaririCode\Logging\Util\SlackClient;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class SlackHandlerTest extends TestCase
+final class SlackHandlerTest extends TestCase
 {
     private SlackClient|MockObject $slackClient;
     private LogFormatter|MockObject $formatter;

@@ -7,7 +7,7 @@ namespace Tests\KaririCode\Logging\Rotator;
 use KaririCode\Logging\Rotator\SizeBasedRotator;
 use PHPUnit\Framework\TestCase;
 
-class SizeBasedRotatorTest extends TestCase
+final class SizeBasedRotatorTest extends TestCase
 {
     private string $tempDir;
     private string $logFile;

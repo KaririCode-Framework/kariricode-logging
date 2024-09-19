@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Metric;
 use KaririCode\Logging\Metric\Monitor;
 use PHPUnit\Framework\TestCase;
 
-class MonitorTest extends TestCase
+final class MonitorTest extends TestCase
 {
     private Monitor $monitor;
 

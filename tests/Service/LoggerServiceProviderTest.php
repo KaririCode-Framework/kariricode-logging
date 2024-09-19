@@ -13,7 +13,7 @@ use KaririCode\Logging\Service\LoggerServiceProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class LoggerServiceProviderTest extends TestCase
+final class LoggerServiceProviderTest extends TestCase
 {
     private LoggerConfiguration|MockObject $config;
     private LoggerFactory|MockObject $loggerFactory;

@@ -10,7 +10,7 @@ use KaririCode\Logging\LogLevel;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class AsyncLoggerTest extends TestCase
+final class AsyncLoggerTest extends TestCase
 {
     private AsyncLogger $asyncLogger;
     private Logger|MockObject $logger;

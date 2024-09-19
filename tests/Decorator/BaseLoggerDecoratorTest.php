@@ -10,7 +10,7 @@ use KaririCode\Logging\LogLevel;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class BaseLoggerDecoratorTest extends TestCase
+final class BaseLoggerDecoratorTest extends TestCase
 {
     private BaseLoggerDecorator $baseLoggerDecorator;
     private Logger|MockObject $logger;

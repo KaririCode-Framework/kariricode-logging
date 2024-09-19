@@ -9,7 +9,7 @@ use KaririCode\Logging\Security\ThreadSafe;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class ThreadSafeTest extends TestCase
+final class ThreadSafeTest extends TestCase
 {
     private ThreadSafe $threadSafe;
     private Mutex|MockObject $mutex;

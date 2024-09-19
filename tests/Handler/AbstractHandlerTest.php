@@ -12,7 +12,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class ConcreteHandler extends AbstractHandler
+final class ConcreteHandler extends AbstractHandler
 {
     public function handle(ImmutableValue $record): void
     {
@@ -20,7 +20,7 @@ class ConcreteHandler extends AbstractHandler
     }
 }
 
-class AbstractHandlerTest extends TestCase
+final class AbstractHandlerTest extends TestCase
 {
     private ConcreteHandler $handler;
 

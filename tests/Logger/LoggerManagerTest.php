@@ -10,14 +10,13 @@ use KaririCode\Contract\Logging\Structural\HandlerAware;
 use KaririCode\Contract\Logging\Structural\ProcessorAware;
 use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\Handler\AbstractHandler;
-use KaririCode\Logging\Handler\ConsoleHandler;
 use KaririCode\Logging\LoggerManager;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Processor\AbstractProcessor;
 use PHPUnit\Framework\TestCase;
 
-class LoggerManagerTest extends TestCase
+final class LoggerManagerTest extends TestCase
 {
     private LoggerManager $loggerManager;
 

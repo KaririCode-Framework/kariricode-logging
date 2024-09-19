@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Exception;
 use KaririCode\Logging\Exception\LoggingException;
 use PHPUnit\Framework\TestCase;
 
-class LoggingExceptionTest extends TestCase
+final class LoggingExceptionTest extends TestCase
 {
     public function testExceptionMessage(): void
     {

@@ -11,7 +11,7 @@ use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\LoggerBuilder;
 use PHPUnit\Framework\TestCase;
 
-class LoggerBuilderTest extends TestCase
+final class LoggerBuilderTest extends TestCase
 {
     public function testBuildLogger(): void
     {

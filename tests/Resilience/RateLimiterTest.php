@@ -9,7 +9,7 @@ use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Resilience\RateLimiter;
 use PHPUnit\Framework\TestCase;
 
-class RateLimiterTest extends TestCase
+final class RateLimiterTest extends TestCase
 {
     private RateLimiter $rateLimiter;
 

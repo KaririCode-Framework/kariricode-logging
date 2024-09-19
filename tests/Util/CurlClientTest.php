@@ -7,7 +7,7 @@ namespace Tests\KaririCode\Logging\Util;
 use KaririCode\Logging\Util\CurlClient;
 use PHPUnit\Framework\TestCase;
 
-class CurlClientTest extends TestCase
+final class CurlClientTest extends TestCase
 {
     private CurlClient $curlClient;
 

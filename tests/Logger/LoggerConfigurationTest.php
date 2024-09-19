@@ -8,7 +8,7 @@ use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\LoggerConfiguration;
 use PHPUnit\Framework\TestCase;
 
-class LoggerConfigurationTest extends TestCase
+final class LoggerConfigurationTest extends TestCase
 {
     private LoggerConfiguration $config;
 

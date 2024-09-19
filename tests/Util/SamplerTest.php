@@ -7,7 +7,7 @@ namespace Tests\KaririCode\Logging\Util;
 use KaririCode\Logging\Util\Sampler;
 use PHPUnit\Framework\TestCase;
 
-class SamplerTest extends TestCase
+final class SamplerTest extends TestCase
 {
     public function testConstructorWithValidSampleRate(): void
     {

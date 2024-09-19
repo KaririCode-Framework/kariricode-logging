@@ -8,7 +8,7 @@ use KaririCode\Logging\Contract\AnonymizerStrategy;
 use KaririCode\Logging\Security\Anonymizer;
 use PHPUnit\Framework\TestCase;
 
-class AnonymizerTest extends TestCase
+final class AnonymizerTest extends TestCase
 {
     private Anonymizer $anonymizer;
 

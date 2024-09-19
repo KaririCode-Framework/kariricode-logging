@@ -9,7 +9,7 @@ use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Processor\Metric\MemoryUsageProcessor;
 use PHPUnit\Framework\TestCase;
 
-class MemoryUsageProcessorTest extends TestCase
+final class MemoryUsageProcessorTest extends TestCase
 {
     private MemoryUsageProcessor $memoryUsageProcessor;
 

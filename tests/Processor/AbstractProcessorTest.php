@@ -10,23 +10,7 @@ use KaririCode\Contract\Logging\Structural\ProcessorAware;
 use KaririCode\Logging\Processor\AbstractProcessor;
 use PHPUnit\Framework\TestCase;
 
-// Classe concreta para testar AbstractProcessor
-class ConcreteTestProcessor extends AbstractProcessor
-{
-    public function process(ImmutableValue $record): ImmutableValue
-    {
-        // Implementação simples para teste
-        return $record;
-    }
-
-    // Expõe o método protegido para teste
-    public function testHasValidContext(array $context): bool
-    {
-        return $this->hasValidContext($context);
-    }
-}
-
-class AbstractProcessorTest extends TestCase
+final class AbstractProcessorTest extends TestCase
 {
     private ConcreteTestProcessor $processor;
 
@@ -94,5 +78,22 @@ class AbstractProcessorTest extends TestCase
         $result = $this->processor->process($mockRecord);
 
         $this->assertSame($mockRecord, $result);
+    }
+}
+
+
+
+final class ConcreteTestProcessor extends AbstractProcessor
+{
+    public function process(ImmutableValue $record): ImmutableValue
+    {
+        // Implementação simples para teste
+        return $record;
+    }
+
+    // Expõe o método protegido para teste
+    public function testHasValidContext(array $context): bool
+    {
+        return $this->hasValidContext($context);
     }
 }

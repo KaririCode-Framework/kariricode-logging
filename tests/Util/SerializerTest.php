@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Util;
 use KaririCode\Logging\Util\Serializer;
 use PHPUnit\Framework\TestCase;
 
-class SerializerTest extends TestCase
+final class SerializerTest extends TestCase
 {
     private Serializer $serializer;
 

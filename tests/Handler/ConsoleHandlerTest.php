@@ -13,7 +13,7 @@ use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class ConsoleHandlerTest extends TestCase
+final class ConsoleHandlerTest extends TestCase
 {
     private mixed $outputMock;
     private LogFormatter|MockObject $formatterMock;

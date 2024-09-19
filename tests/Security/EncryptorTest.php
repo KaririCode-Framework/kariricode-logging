@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Security;
 use KaririCode\Logging\Security\Encryptor;
 use PHPUnit\Framework\TestCase;
 
-class EncryptorTest extends TestCase
+final class EncryptorTest extends TestCase
 {
     private Encryptor $encryptor;
 

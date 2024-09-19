@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Resilience;
 use KaririCode\Logging\Resilience\CircuitBreaker;
 use PHPUnit\Framework\TestCase;
 
-class CircuitBreakerTest extends TestCase
+final class CircuitBreakerTest extends TestCase
 {
     private CircuitBreaker $circuitBreaker;
 

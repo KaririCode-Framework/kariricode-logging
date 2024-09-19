@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Tracing;
 use KaririCode\Logging\Tracing\DistributedTracing;
 use PHPUnit\Framework\TestCase;
 
-class DistributedTracingTest extends TestCase
+final class DistributedTracingTest extends TestCase
 {
     private DistributedTracing $distributedTracing;
 

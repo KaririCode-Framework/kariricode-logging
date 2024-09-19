@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Resilience;
 use KaririCode\Logging\Resilience\Retry;
 use PHPUnit\Framework\TestCase;
 
-class RetryTest extends TestCase
+final class RetryTest extends TestCase
 {
     public function testExecuteHappyPath(): void
     {

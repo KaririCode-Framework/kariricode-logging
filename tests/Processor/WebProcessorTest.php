@@ -9,7 +9,7 @@ use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Processor\WebProcessor;
 use PHPUnit\Framework\TestCase;
 
-class WebProcessorTest extends TestCase
+final class WebProcessorTest extends TestCase
 {
     private WebProcessor $webProcessor;
 

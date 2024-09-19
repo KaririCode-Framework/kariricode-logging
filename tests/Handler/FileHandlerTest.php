@@ -11,7 +11,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class FileHandlerTest extends TestCase
+final class FileHandlerTest extends TestCase
 {
     private string $testLogDir;
     private string $testLogFile;

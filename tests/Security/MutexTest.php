@@ -8,7 +8,7 @@ use KaririCode\Logging\Security\Mutex;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class MutexTest extends TestCase
+final class MutexTest extends TestCase
 {
     private Mutex|MockObject $mutex;
 

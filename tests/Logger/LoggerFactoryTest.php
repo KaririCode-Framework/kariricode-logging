@@ -15,7 +15,7 @@ use KaririCode\Logging\Processor\LoggerProcessorFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class LoggerFactoryTest extends TestCase
+final class LoggerFactoryTest extends TestCase
 {
     private LoggerConfiguration|MockObject $config;
     private LoggerHandlerFactory|MockObject $handlerFactory;

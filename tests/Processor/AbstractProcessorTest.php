@@ -81,8 +81,6 @@ final class AbstractProcessorTest extends TestCase
     }
 }
 
-
-
 final class ConcreteTestProcessor extends AbstractProcessor
 {
     public function process(ImmutableValue $record): ImmutableValue

@@ -6,6 +6,7 @@ namespace KaririCode\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogHandler;
 use KaririCode\Logging\Contract\LoggerConfigurableFactory;
+use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\Util\ReflectionFactoryTrait;
@@ -32,6 +33,11 @@ class LoggerHandlerFactory implements LoggerConfigurableFactory
     public function createHandlers(string $handlerName): array
     {
         $handlersConfig = $this->getHandlersConfig($handlerName);
+
+        if (empty($handlersConfig)) {
+            throw new LoggingException("No handlers configured for channel: $handlerName");
+        }
+
         $handlers = [];
         foreach ($handlersConfig as $key => $value) {
             [$handlerName, $handlerOptions] = $this->extractMergedConfig($key, $value);

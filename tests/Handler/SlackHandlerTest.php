@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\Tests\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Logging\Handler\SlackHandler;

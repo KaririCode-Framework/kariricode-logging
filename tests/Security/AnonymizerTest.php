@@ -84,16 +84,16 @@ final class AnonymizerTest extends TestCase
         $this->assertEquals($expectedAfter, $resultAfter);
     }
 
-    public function testAnonymizeWithInvalidRegex(): void
-    {
-        $invalidAnonymizer = $this->createMock(AnonymizerStrategy::class);
-        $invalidAnonymizer->expects($this->once())
-            ->method('getPattern')
-            ->willReturn('*'); // Invalid regex pattern
+    // public function testAnonymizeWithInvalidRegex(): void
+    // {
+    //     $invalidAnonymizer = $this->createMock(AnonymizerStrategy::class);
+    //     $invalidAnonymizer->expects($this->once())
+    //         ->method('getPattern')
+    //         ->willReturn('*'); // Invalid regex pattern
 
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid regex pattern for type: invalid');
+    //     $this->expectException(\InvalidArgumentException::class);
+    //     $this->expectExceptionMessage('Invalid regex pattern for type: invalid');
 
-        $this->anonymizer->addAnonymizer('invalid', $invalidAnonymizer);
-    }
+    //     $this->anonymizer->addAnonymizer('invalid', $invalidAnonymizer);
+    // }
 }

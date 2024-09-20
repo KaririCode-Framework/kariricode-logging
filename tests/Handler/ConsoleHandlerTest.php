@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\KaririCode\Logging\Tests\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Logging\Formatter\ConsoleColorFormatter;

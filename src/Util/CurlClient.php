@@ -35,11 +35,10 @@ class CurlClient
      */
     private function setPostOptions(\CurlHandle $ch, array $data, array $headers): void
     {
-        try {
-            $payload = json_encode($data, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw new \JsonException('Failed to encode data: ' . $e->getMessage(), $e->getCode(), $e);
-        }
+        $payload = json_encode($data, JSON_THROW_ON_ERROR);
+
+        $defaultHeaders = ['Content-Type: application/json'];
+        $headers = array_merge($defaultHeaders, $headers);
 
         curl_setopt_array($ch, [
             CURLOPT_POST => true,

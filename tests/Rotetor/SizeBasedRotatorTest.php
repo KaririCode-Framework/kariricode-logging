@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Rotator;
+namespace KaririCode\Logging\Tests\Logging\Rotator;
 
 use KaririCode\Logging\Rotator\SizeBasedRotator;
 use PHPUnit\Framework\TestCase;

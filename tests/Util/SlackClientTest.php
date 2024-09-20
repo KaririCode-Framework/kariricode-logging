@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Util;
+namespace KaririCode\Logging\Tests\Logging\Util;
 
 use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\Resilience\CircuitBreaker;

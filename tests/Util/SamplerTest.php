@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Util;
+namespace KaririCode\Logging\Tests\Logging\Util;
 
 use KaririCode\Logging\Util\Sampler;
 use PHPUnit\Framework\TestCase;

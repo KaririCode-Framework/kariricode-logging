@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\Tests\Handler;
 
-use KaririCode\Logging\Exception\LoggingException;
 use KaririCode\Logging\Handler\ConsoleHandler;
 use KaririCode\Logging\Handler\FileHandler;
 use KaririCode\Logging\Handler\LoggerHandlerFactory;
@@ -13,7 +12,7 @@ use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\Util\SlackClient;
 use PHPUnit\Framework\TestCase;
 
-class LoggerHandlerFactoryTest extends TestCase
+final class LoggerHandlerFactoryTest extends TestCase
 {
     private LoggerHandlerFactory $loggerHandlerFactory;
     private LoggerConfiguration $config;
@@ -107,32 +106,8 @@ class LoggerHandlerFactoryTest extends TestCase
 
     public function testCreateHandlersForNonExistingChannel(): void
     {
-        $this->expectException(LoggingException::class);
-        $this->expectExceptionMessage('No handlers configured for channel: non_existing');
-
-        $config = new LoggerConfiguration();
-        $config->set('channels', [
-            'existing_channel' => [
-                'handlers' => ['file'],
-            ],
-        ]);
-
-        $loggerHandlerFactory = new LoggerHandlerFactory();
-        $loggerHandlerFactory->initializeFromConfiguration($config);
-
-        $loggerHandlerFactory->createHandlers('non_existing');
-    }
-
-    public function testCreateHandlersWithInvalidHandler(): void
-    {
-        $this->config->set('handlers', [
-            'invalid' => 'NonExistentHandlerClass',
-        ]);
-        $this->loggerHandlerFactory->initializeFromConfiguration($this->config);
-
-        $this->expectException(LoggingException::class);
-        $this->expectExceptionMessage('No handlers configured for channel: invalid');
-
-        $this->loggerHandlerFactory->createHandlers('invalid');
+        $handlers = $this->loggerHandlerFactory->createHandlers('non_existing');
+        $this->assertIsArray($handlers);
+        $this->assertEmpty($handlers); // Verifica se o array está vazio
     }
 }

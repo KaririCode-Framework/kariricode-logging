@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging;
+namespace KaririCode\Logging\Tests\Logging;
 
 use KaririCode\Contract\Logging\Logger;
 use KaririCode\Logging\Decorator\AsyncLogger;

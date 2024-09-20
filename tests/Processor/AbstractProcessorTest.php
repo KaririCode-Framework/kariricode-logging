@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\KaririCode\Logging\Processor;
+namespace KaririCode\Logging\KaririCode\Logging\Tests\Logging\Processor;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Contract\Logging\LogProcessor;

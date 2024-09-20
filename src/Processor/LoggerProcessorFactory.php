@@ -18,14 +18,7 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
 
     public function initializeFromConfiguration(LoggerConfiguration $config): void
     {
-        $this->processorMap = $config->get('processors', [
-            'introspection' => IntrospectionProcessor::class,
-            'memory_usage_processor' => Metric\MemoryUsageProcessor::class,
-            'execution_time_processor' => Metric\ExecutionTimeProcessor::class,
-            'cpu_usage_processor' => Metric\CpuUsageProcessor::class,
-            'metrics_processor' => MetricsProcessor::class,
-            'web_processor' => WebProcessor::class,
-        ]);
+        $this->processorMap = $config->get('processors', []);
 
         $this->config = $config;
     }
@@ -47,14 +40,14 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
         $channelProcessorConfig = $this->getChannelProcessorsConfig($channelName);
         $optionalProcessorConfig = $this->getOptionalProcessorsConfig($channelName);
 
-        return array_merge($channelProcessorConfig ?? [], $optionalProcessorConfig ?? []);
+        return array_merge($channelProcessorConfig, $optionalProcessorConfig);
     }
 
-    private function getChannelProcessorsConfig(string $channelName): ?array
+    private function getChannelProcessorsConfig(string $channelName): array
     {
         $channelConfigs = $this->config->get('channels', []);
 
-        return $channelConfigs[$channelName]['processors'] ?? null;
+        return $channelConfigs[$channelName]['processors'] ?? [];
     }
 
     private function getOptionalProcessorsConfig(string $channelName): ?array
@@ -88,5 +81,10 @@ class LoggerProcessorFactory implements LoggerConfigurableFactory
         $defaultConfig = $this->processorMap[$processorName]['with'] ?? [];
 
         return array_merge($defaultConfig, $channelConfig);
+    }
+
+    public function getProcessorMap(): array
+    {
+        return $this->processorMap;
     }
 }

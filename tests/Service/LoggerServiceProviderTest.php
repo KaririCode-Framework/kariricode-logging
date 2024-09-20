@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Service;
+namespace KaririCode\Logging\Tests\Logging\Service;
 
 use KaririCode\Contract\Logging\Logger;
 use KaririCode\Logging\Exception\InvalidConfigurationException;

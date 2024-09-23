@@ -7,7 +7,6 @@ namespace KaririCode\Logging\Util;
 class CurlClient
 {
     private const TIMEOUT = 30;
-    private const DEFAULT_HEADERS = ['Content-Type: application/json'];
 
     public function post(string $url, array $data, array $headers = []): array
     {
@@ -23,6 +22,31 @@ class CurlClient
             'status' => $httpCode,
             'body' => $response,
         ];
+    }
+
+    /**
+     * Set POST options for the cURL session.
+     *
+     * @param \CurlHandle $ch the cURL handle
+     * @param array $data the data to be sent in the request body
+     * @param array $headers additional headers to be sent with the request
+     *
+     * @throws \JsonException if there's an error encoding the data
+     */
+    private function setPostOptions(\CurlHandle $ch, array $data, array $headers): void
+    {
+        $payload = json_encode($data, JSON_THROW_ON_ERROR);
+
+        $defaultHeaders = ['Content-Type: application/json'];
+        $headers = array_merge($defaultHeaders, $headers);
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => self::TIMEOUT,
+        ]);
     }
 
     /**
@@ -42,32 +66,6 @@ class CurlClient
         }
 
         return $ch;
-    }
-
-    /**
-     * Set POST options for the cURL session.
-     *
-     * @param \CurlHandle $ch the cURL handle
-     * @param array $data the data to be sent in the request body
-     * @param array $headers additional headers to be sent with the request
-     *
-     * @throws \JsonException if there's an error encoding the data
-     */
-    private function setPostOptions(\CurlHandle $ch, array $data, array $headers): void
-    {
-        try {
-            $payload = json_encode($data, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw new \JsonException('Failed to encode data: ' . $e->getMessage(), $e->getCode(), $e);
-        }
-
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => array_merge(self::DEFAULT_HEADERS, $headers),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => self::TIMEOUT,
-        ]);
     }
 
     /**

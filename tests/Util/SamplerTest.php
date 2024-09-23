@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Util;
+namespace KaririCode\Logging\Tests\Logging\Util;
 
 use KaririCode\Logging\Util\Sampler;
 use PHPUnit\Framework\TestCase;
 
-class SamplerTest extends TestCase
+final class SamplerTest extends TestCase
 {
     public function testConstructorWithValidSampleRate(): void
     {
@@ -24,7 +24,6 @@ class SamplerTest extends TestCase
 
     public function testShouldSampleWithZeroRate(): void
     {
-
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Sample rate must be between 0 and 1');
         $sampler = new Sampler(0);
@@ -42,9 +41,9 @@ class SamplerTest extends TestCase
         $samples = 10000;
         $trueCount = 0;
 
-        for ($i = 0; $i < $samples; $i++) {
+        for ($i = 0; $i < $samples; ++$i) {
             if ($sampler->shouldSample()) {
-                $trueCount++;
+                ++$trueCount;
             }
         }
 

@@ -1,81 +1,64 @@
 <?php
 
+// application.php
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use KaririCode\Logging\LoggerConfiguration;
+use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
 use KaririCode\Logging\Service\LoggerServiceProvider;
-use KaririCode\Logging\Util\ConfigHelper;
+use KaririCode\Logging\Util\Config;
 
 // Carrega o arquivo .env
-ConfigHelper::loadEnv();
+Config::loadEnv();
 
 // Inicialização e execução da aplicação
 $configPath = __DIR__ . '/../config/logging.php';
 $loggerConfig = new LoggerConfiguration();
 $loggerConfig->load($configPath);
 
-$serviceProvider = new LoggerServiceProvider();
-$serviceProvider->register($loggerConfig);
+$loggerFactory = new LoggerFactory($loggerConfig);
+$loggerRegistry = new LoggerRegistry();
+$serviceProvider = new LoggerServiceProvider(
+    $loggerConfig,
+    $loggerFactory,
+    $loggerRegistry
+);
 
-// / Obtém o logger padrão
-$defaultLogger = LoggerRegistry::getLogger('default');
+$serviceProvider->register();
 
-// Testa o logger padrão
-$defaultLogger->info('This is an info message.');
-$defaultLogger->error('This is an error message.');
+$defaultLogger = $loggerRegistry->getLogger('console');
 
-// Testa o logger assíncrono
-if (LoggerRegistry::getLogger('async') instanceof AsyncLogger) {
-    $asyncLogger = LoggerRegistry::getLogger('async');
-    $asyncLogger->info('This is an async info message.');
-    $asyncLogger->error('This is an async error message.');
+$defaultLogger->debug('User email is john.doe@example.com');
+$defaultLogger->info('User IP is 192.168.1.1');
+$defaultLogger->notice('User credit card number is 1234-5678-1234-5678', ['context' => 'credit card']);
+$defaultLogger->warning('User phone number is (11) 91234-7890', ['context' => 'phone']);
+$defaultLogger->error('This is an error message with email john.doe@example.com', ['context' => 'error']);
+$defaultLogger->critical('This is a critical message with IP 192.168.1.1', ['context' => 'critical']);
+$defaultLogger->alert('This is an alert message with credit card 1234-5678-1234-5678', ['context' => 'alert']);
+$defaultLogger->emergency('This is an emergency message with phone number 123-456-7890', ['context' => 'emergency']);
+
+$asyncLogger = $loggerRegistry->getLogger('async');
+if ($asyncLogger) {
+    for ($i = 0; $i < 3; ++$i) {
+        $asyncLogger->info("Async log message {$i}", ['context' => "batch {$i}"]);
+    }
 }
 
-// Testa o query logger
-if (LoggerRegistry::getLogger('query')) {
-    $queryLogger = LoggerRegistry::getLogger('query');
-    $queryLogger->debug('Executing query...', ['query' => 'SELECT * FROM users', 'bindings' => []]);
-}
+$queryLogger = $loggerRegistry->getLogger('query');
+$queryLogger->info('Executing a query', ['time' => 90, 'query' => 'SELECT * FROM users', 'bindings' => []]);
 
-// Testa o performance logger
-if (LoggerRegistry::getLogger('performance')) {
-    $performanceLogger = LoggerRegistry::getLogger('performance');
-    $performanceLogger->debug('Performance logging', ['execution_time' => 1500]);
-}
+$queryLogger = $loggerRegistry->getLogger('query');
+$queryLogger->info('Executing a query', ['query' => 'SELECT * FROM users', 'bindings' => []]);
 
-// Testa o error logger
-if (LoggerRegistry::getLogger('error')) {
-    $errorLogger = LoggerRegistry::getLogger('error');
-    $errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
-}
+$performanceLogger = $loggerRegistry->getLogger('performance');
+$performanceLogger->debug('Performance logging', ['execution_time' => 1000, 'additional_context' => 'example']);
 
-// Exemplo de registro de um log de emergência
-$emergencyLogger = LoggerRegistry::getLogger('emergency');
-$emergencyLogger->emergency('This is an emergency message.');
+$performanceLogger = $loggerRegistry->getLogger('performance');
+$performanceLogger->debug('Performance logging');
 
-// Exemplo de registro de um log com processador de introspecção
-$defaultLogger->info('Testing introspection processor.');
+$errorLogger = $loggerRegistry->getLogger('error');
+$errorLogger->error('This is a critical error.', ['context' => 'Testing error logger']);
 
-// Exemplo de registro de um log com processador de memória
-$defaultLogger->debug('Testing memory usage processor.', ['memory_usage' => memory_get_usage(true)]);
-
-// Exemplo de registro de um log com processador de Git
-$defaultLogger->info('Testing Git processor.', ['branch' => 'main', 'commit' => '1234567890abcdef']);
-
-// Exemplo de registro de um log com processador Web
-$_SERVER['REQUEST_URI'] = '/test-uri';
-$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
-$_SERVER['REQUEST_METHOD'] = 'GET';
-$_SERVER['SERVER_NAME'] = 'localhost';
-$_SERVER['HTTP_REFERER'] = 'http://localhost/referrer';
-
-$defaultLogger->info('Testing web processor.', [
-    'url' => ($_SERVER['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/'),
-    'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-    'http_method' => $_SERVER['REQUEST_METHOD'] ?? null,
-    'server' => $_SERVER['SERVER_NAME'] ?? null,
-    'referrer' => $_SERVER['HTTP_REFERER'] ?? null,
-]);
-
-echo "All loggers tested successfully.\n";
+$slackLogger = $loggerRegistry->getLogger('slack');
+$slackLogger->critical('Este é um teste de mensagem crítica enviada para o Slack');

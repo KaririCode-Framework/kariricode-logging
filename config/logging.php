@@ -1,161 +1,218 @@
 <?php
 
 use KaririCode\Logging\LogLevel;
-use KaririCode\Logging\Util\ConfigHelper;
+use KaririCode\Logging\Util\Config;
 
 return [
-    'default' => ConfigHelper::env('LOG_CHANNEL', 'single'),
-
+    'default' => Config::env('LOG_CHANNEL', 'file'),
+    'timezone' => Config::env('LOG_TIMEZONE', 'UTC'),
     'channels' => [
-        'stack' => [
-            'driver' => 'stack',
-            'channels' => ['daily', 'slack'],
-            'ignore_exceptions' => false,
-        ],
-
-        'single' => [
-            'driver' => 'single',
-            'path' => ConfigHelper::storagePath('logs/logging.log'),
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'bubble' => true,
-            'permission' => 0664,
-            'locking' => false,
-        ],
-
-        'daily' => [
-            'driver' => 'daily',
-            'path' => ConfigHelper::storagePath('logs/logging.log'),
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'days' => 14,
-            'bubble' => true,
-            'permission' => 0664,
-            'locking' => false,
-        ],
-
-        'slack' => [
-            'driver' => 'slack',
-            'url' => ConfigHelper::env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => 'KaririCode Log',
-            'emoji' => ':boom:',
-            'level' => ConfigHelper::env('LOG_LEVEL', 'critical'),
-            'bubble' => true,
-            'context' => ['from' => 'KaririCode'],
-            'channels' => ['alerts'],
-        ],
-
-        'papertrail' => [
-            'driver' => 'monolog',
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'handler' => \KaririCode\Logging\Handler\SyslogUdpHandler::class,
-            'handler_with' => [
-                'host' => ConfigHelper::env('PAPERTRAIL_URL'),
-                'port' => ConfigHelper::env('PAPERTRAIL_PORT')
+        'file' => [
+            'minLevel' => Config::env('LOG_LEVEL', 'debug'),
+            'handlers' => [
+                'file' => [
+                    'with' => ['filePath' => Config::storagePath('logs/file2.log')],
+                ],
+            ],
+            'processors' => [
+                'introspection_processor',
+                'anonymizer_processor'
+            ],
+            'formatter' => [
+                'line' => [
+                    'with' => [
+                        'dateFormat' => 'Y-m-d H:i:s',
+                    ]
+                ],
             ],
         ],
+        'console' => [
+            'minLevel' => Config::env('LOG_LEVEL', 'debug'),
+            'handlers' => ['console'],
+            'formatter' => [
+                'json' => [
+                    'with' => [
+                        'includeStacktraces' => false,
+                    ]
+                ]
+            ],
 
-        'stderr' => [
-            'driver' => 'monolog',
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'handler' => \KaririCode\Logging\Handler\ConsoleHandler::class,
-            'formatter' => ConfigHelper::env('LOG_STDERR_FORMATTER'),
-            'with' => [
-                'stream' => 'php://stderr',
+            'processors' => [
+                'introspection_processor',
+                'anonymizer_processor'
             ],
         ],
-
         'syslog' => [
-            'driver' => 'syslog',
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'facility' => LOG_USER,
-            'bubble' => true,
+            'minLevel' => Config::env('LOG_LEVEL', 'debug'),
+            'handlers' => ['syslog'],
         ],
-
-        'errorlog' => [
-            'driver' => 'errorlog',
-            'level' => ConfigHelper::env('LOG_LEVEL', 'debug'),
-            'message_type' => 0,
+        'slack' => [
+            'minLevel' => Config::env('LOG_LEVEL', 'critical'),
+            'handlers' => ['slack'],
+            'formatter' => [
+                'json' => [
+                    'with' => [
+                        'includeStacktraces' => true,
+                    ]
+                ]
+            ],
         ],
-
-        'null' => [
-            'driver' => 'monolog',
-            'handler' => \KaririCode\Logging\Handler\NullHandler::class,
-        ],
-
-        'emergency' => [
-            'path' => ConfigHelper::storagePath('logs/emergency.log'),
-            'level' =>  LogLevel::EMERGENCY,
+        'custom' => [
+            'handlers' => ['custom'],
         ],
     ],
-
+    'async' => [
+        'enabled' => Config::env('ASYNC_LOG_ENABLED', true),
+        'batch_size' => Config::env('ASYNC_LOG_BATCH_SIZE', 10),
+        'channel' => Config::env('ASYNC_LOG_CHANNEL', 'file'),
+    ],
+    'emergency' => [
+        'minLevel' => LogLevel::EMERGENCY,
+        'path' => Config::storagePath('logs/emergency.log'),
+    ],
+    'query' => [
+        'enabled' => Config::env('QUERY_LOG_ENABLED', false),
+        'channel' => Config::env('QUERY_LOG_CHANNEL', 'file'),
+        'threshold' => Config::env('QUERY_LOG_THRESHOLD', 100), // in milliseconds
+        'handlers' => [
+            'console' => [
+                'with' => ['useColors' => true],
+            ],
+            'file' => [
+                'with' => ['filePath' => Config::storagePath('logs/query.log')],
+            ],
+        ],
+    ],
+    'performance' => [
+        'enabled' => Config::env('PERFORMANCE_LOG_ENABLED', false),
+        'channel' => Config::env('PERFORMANCE_LOG_CHANNEL', 'file'),
+        'threshold' => Config::env('PERFORMANCE_LOG_THRESHOLD', 1000), // in milliseconds
+        'handlers' => [
+            'console' => [
+                'with' => ['useColors' => true],
+            ],
+            'file' => [
+                'with' => ['filePath' => Config::storagePath('logs/performance.log')],
+            ],
+        ],
+        'processors' => [
+            'memory_usage_processor',
+            'cpu_usage_processor',
+            'execution_time_processor',
+        ],
+    ],
+    'error' => [
+        'enabled' => Config::env('ERROR_LOG_ENABLED', true),
+        'channel' => Config::env('ERROR_LOG_CHANNEL', 'file'),
+        'levels' => [
+            LogLevel::ERROR,
+            LogLevel::CRITICAL,
+            LogLevel::ALERT,
+            LogLevel::EMERGENCY
+        ],
+    ],
+    'log_cleaner' => [
+        'enabled' => Config::env('LOG_CLEANER_ENABLED', true),
+        'keep_days' => Config::env('LOG_CLEANER_KEEP_DAYS', 30),
+        'channels' => ['single', 'file'],
+    ],
+    'handlers' => [
+        'file' => [
+            'class' => \KaririCode\Logging\Handler\FileHandler::class,
+            'with' => [
+                'filePath' => Config::storagePath('logs/file.log'),
+            ],
+        ],
+        'console' => [
+            'class' => \KaririCode\Logging\Handler\ConsoleHandler::class,
+            'with' => [
+                'minLevel' => LogLevel::DEBUG,
+                'useColors' => true,
+            ],
+        ],
+        'syslog' => [
+            'class' => \KaririCode\Logging\Handler\SyslogUdpHandler::class,
+            'with' => [
+                'host' => '',
+                'port' => 0,
+            ],
+        ],
+        'slack' => [
+            'class' => \KaririCode\Logging\Handler\SlackHandler::class,
+            'with' => [
+                'slackClient' => \KaririCode\Logging\Util\SlackClient::create(
+                    Config::env('SLACK_BOT_TOKEN'),
+                    Config::env('SLACK_CHANNEL', '#logs'),
+                    new \KaririCode\Logging\Resilience\CircuitBreaker(
+                        Config::env('CIRCUIT_BREAKER_FAILURE_THRESHOLD', 3),
+                        Config::env('CIRCUIT_BREAKER_RESET_TIMEOUT', 60)
+                    ),
+                    new \KaririCode\Logging\Resilience\Retry(
+                        Config::env('RETRY_MAX_ATTEMPTS', 3),
+                        Config::env('RETRY_DELAY', 1000),
+                        Config::env('RETRY_MULTIPLIER', 2),
+                        Config::env('RETRY_JITTER', 100)
+                    ),
+                    new \KaririCode\Logging\Resilience\Fallback(),
+                    new \KaririCode\Logging\Util\CurlClient()
+                ),
+                'minLevel' => LogLevel::CRITICAL,
+            ],
+        ],
+        'custom' => [
+            'class' => \KaririCode\Logging\Handler\NullHandler::class,
+        ],
+    ],
     'processors' => [
-        'introspection' => [
+        'introspection_processor' => [
             'class' => \KaririCode\Logging\Processor\IntrospectionProcessor::class,
-            'level' => LogLevel::DEBUG,
+            'with' => [
+                'stackDepth' => 7
+            ]
         ],
-        'git' => [
-            'class' => \KaririCode\Logging\Processor\GitProcessor::class,
-            'level' => LogLevel::INFO,
+        'memory_usage_processor' => [
+            'class' => \KaririCode\Logging\Processor\Metric\MemoryUsageProcessor::class,
         ],
-        'memory_usage' => [
-            'class' => \KaririCode\Logging\Processor\MemoryUsageProcessor::class,
-            'level' => LogLevel::DEBUG,
+        'execution_time_processor' => [
+            'class' => \KaririCode\Logging\Processor\Metric\ExecutionTimeProcessor::class,
+        ],
+        'cpu_usage_processor' => [
+            'class' => \KaririCode\Logging\Processor\Metric\CpuUsageProcessor::class,
+        ],
+        'metrics_processor' => [
+            'class' => \KaririCode\Logging\Processor\MetricsProcessor::class,
         ],
         'web_processor' => [
             'class' => \KaririCode\Logging\Processor\WebProcessor::class,
-            'level' => LogLevel::INFO,
+        ],
+        'anonymizer_processor' => [
+            'class' => \KaririCode\Logging\Processor\AnonymizerProcessor::class,
+            'with' => [
+                'anonymizer' => new \KaririCode\Logging\Security\Anonymizer([
+                    'phone' => new \KaririCode\Logging\Security\Anonymizer\PhoneAnonymizer(),
+                    'ip' => new \KaririCode\Logging\Security\Anonymizer\IpAnonymizer(),
+                ]),
+            ],
+        ],
+        'encryption_processor' => [
+            'class' => \KaririCode\Logging\Processor\EncryptionProcessor::class,
+            'with' => [
+                'encryptor' => new \KaririCode\Logging\Security\Encryptor(Config::env('LOG_ENCRYPTION_KEY')),
+            ],
         ],
     ],
-
     'formatters' => [
-        'default' => [
+        'line' => [
             'class' => \KaririCode\Logging\Formatter\LineFormatter::class,
-            'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
-            'date_format' => 'Y-m-d H:i:s',
-            'colors' => true,
-            'multiline' => true,
+            'with' => [
+                'dateFormat' => 'Y-m-d H:i:s',
+            ]
         ],
         'json' => [
             'class' => \KaririCode\Logging\Formatter\JsonFormatter::class,
-            'include_stacktraces' => true,
+            'with' => [
+                'includeStacktraces' => true,
+            ]
         ],
-        'elastic' => [
-            'class' => \KaririCode\Logging\Formatter\ElasticFormatter::class,
-            'index' => ConfigHelper::env('ELASTIC_LOG_INDEX', 'logging-logs'),
-        ],
-    ],
-
-    'async' => [
-        'enabled' => ConfigHelper::env('ASYNC_LOG_ENABLED', true),
-        'driver' => \KaririCode\Logging\Decorator\AsyncLogger::class,
-        'batch_size' => 10, // Process logs in batches of 10
-    ],
-
-    'emergency_logger' => [
-        'path' => ConfigHelper::storagePath('logs/emergency.log'),
-        'level' => LogLevel::EMERGENCY,
-    ],
-
-    'query_logger' => [
-        'enabled' => ConfigHelper::env('QUERY_LOG_ENABLED', false),
-        'channel' => ConfigHelper::env('QUERY_LOG_CHANNEL', 'daily'),
-        'threshold' => ConfigHelper::env('QUERY_LOG_THRESHOLD', 100), // in milliseconds
-    ],
-
-    'performance_logger' => [
-        'enabled' => ConfigHelper::env('PERFORMANCE_LOG_ENABLED', false),
-        'channel' => ConfigHelper::env('PERFORMANCE_LOG_CHANNEL', 'daily'),
-        'threshold' => ConfigHelper::env('PERFORMANCE_LOG_THRESHOLD', 1000), // in milliseconds
-    ],
-
-    'error_logger' => [
-        'enabled' => ConfigHelper::env('ERROR_LOG_ENABLED', true),
-        'channel' => ConfigHelper::env('ERROR_LOG_CHANNEL', 'daily'),
-        'levels' => [LogLevel::ERROR, LogLevel::CRITICAL, LogLevel::ALERT, LogLevel::EMERGENCY],
-    ],
-
-    'log_cleaner' => [
-        'enabled' => ConfigHelper::env('LOG_CLEANER_ENABLED', true),
-        'keep_days' => ConfigHelper::env('LOG_CLEANER_KEEP_DAYS', 30),
-        'channels' => ['single', 'daily'],
     ],
 ];

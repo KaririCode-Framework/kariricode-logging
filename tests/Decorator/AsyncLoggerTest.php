@@ -10,7 +10,7 @@ use KaririCode\Logging\LogLevel;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class AsyncLoggerTest extends TestCase
+final class AsyncLoggerTest extends TestCase
 {
     private AsyncLogger $asyncLogger;
     private Logger|MockObject $logger;
@@ -49,7 +49,7 @@ class AsyncLoggerTest extends TestCase
                 $this->assertSame($logs[$callCount][0], $level);
                 $this->assertSame($logs[$callCount][1], $message);
                 $this->assertSame($logs[$callCount][2], $context);
-                $callCount++;
+                ++$callCount;
             });
 
         foreach ($logs as $log) {

@@ -8,8 +8,8 @@ class Encryptor
 {
     public function __construct(private readonly string $key)
     {
-        if (32 !== strlen($key)) {
-            throw new \InvalidArgumentException('Key must be exactly 32 bytes long');
+        if (32 > strlen($key)) {
+            throw new \InvalidArgumentException('Key must be at least 32 bytes long');
         }
     }
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\KaririCode\Logging\Tests\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Logging\Formatter\ConsoleColorFormatter;
@@ -13,7 +13,7 @@ use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class ConsoleHandlerTest extends TestCase
+final class ConsoleHandlerTest extends TestCase
 {
     private mixed $outputMock;
     private LogFormatter|MockObject $formatterMock;

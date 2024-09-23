@@ -8,7 +8,7 @@ use KaririCode\Contract\ImmutableValue;
 use KaririCode\Logging\Formatter\AbstractFormatter;
 use PHPUnit\Framework\TestCase;
 
-class AbstractFormatterTest extends TestCase
+final class AbstractFormatterTest extends TestCase
 {
     public function testGetFormatter(): void
     {

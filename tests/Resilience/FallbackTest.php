@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Resilience;
 use KaririCode\Logging\Resilience\Fallback;
 use PHPUnit\Framework\TestCase;
 
-class FallbackTest extends TestCase
+final class FallbackTest extends TestCase
 {
     public function testPrimaryOperationSucceeds(): void
     {

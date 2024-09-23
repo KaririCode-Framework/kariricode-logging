@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Metric;
 use KaririCode\Logging\Metric\MetricsCollector;
 use PHPUnit\Framework\TestCase;
 
-class MetricsCollectorTest extends TestCase
+final class MetricsCollectorTest extends TestCase
 {
     private MetricsCollector $metricsCollector;
 

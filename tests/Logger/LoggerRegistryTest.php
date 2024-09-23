@@ -5,27 +5,62 @@ declare(strict_types=1);
 namespace KaririCode\Logging\Tests\Logger;
 
 use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Exception\LoggerNotFoundException;
 use KaririCode\Logging\LoggerRegistry;
 use PHPUnit\Framework\TestCase;
 
-class LoggerRegistryTest extends TestCase
+final class LoggerRegistryTest extends TestCase
 {
-    public function testAddAndRetrieveLogger(): void
-    {
-        $logger = $this->createMock(Logger::class);
-        LoggerRegistry::addLogger('test', $logger);
+    private LoggerRegistry $registry;
+    protected Logger $mockLogger;
 
-        $retrievedLogger = LoggerRegistry::getLogger('test');
-        $this->assertSame($logger, $retrievedLogger);
+    protected function setUp(): void
+    {
+        $this->registry = new LoggerRegistry();
+        $this->mockLogger = $this->createMock(Logger::class);
+    }
+
+    public function testAddAndGetLogger(): void
+    {
+        $this->registry->addLogger('test', $this->mockLogger);
+
+        $this->assertSame($this->mockLogger, $this->registry->getLogger('test'));
+    }
+
+    public function testGetNonexistentLogger(): void
+    {
+        $this->expectException(LoggerNotFoundException::class);
+        $this->expectExceptionMessage('Logger with name "nonexistent" not found.');
+
+        $this->registry->getLogger('nonexistent');
     }
 
     public function testRemoveLogger(): void
     {
-        $logger = $this->createMock(Logger::class);
-        LoggerRegistry::addLogger('test', $logger);
-        LoggerRegistry::removeLogger('test');
+        $this->registry->addLogger('test', $this->mockLogger);
+        $this->registry->removeLogger('test');
 
-        $retrievedLogger = LoggerRegistry::getLogger('test');
-        $this->assertNull($retrievedLogger);
+        $this->expectException(LoggerNotFoundException::class);
+        $this->expectExceptionMessage('Logger with name "test" not found.');
+
+        $this->registry->getLogger('test');
+    }
+
+    public function testCannotAddLoggerWithSameNameTwice(): void
+    {
+        $this->registry->addLogger('test', $this->mockLogger);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Logger with name "test" already exists.');
+
+        $this->registry->addLogger('test', $this->mockLogger);
+    }
+
+    public function testRemoveNonexistentLogger(): void
+    {
+        $this->expectException(LoggerNotFoundException::class);
+        $this->expectExceptionMessage('Logger with name "nonexistent" not found.');
+
+        $this->registry->removeLogger('nonexistent');
     }
 }

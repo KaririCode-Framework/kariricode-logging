@@ -8,6 +8,9 @@ use Composer\Script\Event;
 
 class ConfigGenerator
 {
+    private const DIRECTORY_PERMISSION = 0755;
+    private const FILE_PERMISSION = 0664;
+
     public static function generateConfig(Event $event): void
     {
         $vendorDir = $event->getComposer()->getConfig()->get('vendor-dir');
@@ -15,19 +18,31 @@ class ConfigGenerator
         $configDir = $projectRoot . '/config';
         $configFile = $configDir . '/logging.php';
 
-        if (!is_dir($configDir) && !mkdir($configDir, 0755, true) && !is_dir($configDir)) {
-            throw new \RuntimeException(sprintf('Directory "%s" was not created', $configDir));
-        }
+        self::ensureConfigDirectoryExists($configDir);
 
         if (!file_exists($configFile)) {
-            $configContent = self::getConfigContent();
-            if (false === file_put_contents($configFile, $configContent)) {
-                throw new \RuntimeException(sprintf('Failed to write config file: %s', $configFile));
-            }
-            $event->getIO()->write('<info>Created config file: ' . $configFile . '</info>');
+            self::createConfigFile($configFile, $event);
         } else {
             $event->getIO()->write('<info>Config file already exists: ' . $configFile . '</info>');
         }
+    }
+
+    private static function ensureConfigDirectoryExists(string $configDir): void
+    {
+        if (!is_dir($configDir) && !mkdir($configDir, self::DIRECTORY_PERMISSION, true) && !is_dir($configDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $configDir));
+        }
+    }
+
+    private static function createConfigFile(string $configFile, Event $event): void
+    {
+        $configContent = self::getConfigContent();
+        if (false === file_put_contents($configFile, $configContent)) {
+            throw new \RuntimeException(sprintf('Failed to write config file: %s', $configFile));
+        }
+
+        chmod($configFile, self::FILE_PERMISSION); // Aplicando a permissão ao arquivo
+        $event->getIO()->write('<info>Created config file: ' . $configFile . '</info>');
     }
 
     private static function getConfigContent(): string
@@ -127,10 +142,6 @@ return [
             'class' => \KaririCode\Logging\Processor\IntrospectionProcessor::class,
             'level' => LogLevel::DEBUG,
         ],
-        'git' => [
-            'class' => \KaririCode\Logging\Processor\GitProcessor::class,
-            'level' => LogLevel::INFO,
-        ],
         'memory_usage' => [
             'class' => \KaririCode\Logging\Processor\MemoryUsageProcessor::class,
             'level' => LogLevel::DEBUG,
@@ -194,6 +205,7 @@ return [
         'channels' => ['single', 'daily'],
     ],
 ];
+
 EOT;
     }
 }

@@ -8,7 +8,23 @@ use KaririCode\Contract\ImmutableValue;
 
 class JsonFormatter extends AbstractFormatter
 {
+    private const JSON_OPTIONS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+
     public function format(ImmutableValue $record): string
+    {
+        $data = $this->prepareData($record);
+
+        return $this->encodeJson($data);
+    }
+
+    public function formatBatch(array $records): string
+    {
+        $formattedRecords = array_map([$this, 'prepareData'], $records);
+
+        return $this->encodeJson($formattedRecords);
+    }
+
+    private function prepareData(ImmutableValue $record): array
     {
         $data = [
             'datetime' => $record->datetime->format($this->dateFormat),
@@ -20,16 +36,11 @@ class JsonFormatter extends AbstractFormatter
             $data['context'] = $record->context;
         }
 
-        return json_encode(
-            $data,
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-        );
+        return $data;
     }
 
-    public function formatBatch(array $records): string
+    private function encodeJson($data): string
     {
-        return json_encode(array_map(function ($record) {
-            return json_decode($this->format($record), true);
-        }, $records), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return json_encode($data, self::JSON_OPTIONS | JSON_THROW_ON_ERROR);
     }
 }

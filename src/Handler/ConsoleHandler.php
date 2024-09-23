@@ -23,11 +23,16 @@ class ConsoleHandler extends AbstractHandler
     ) {
         parent::__construct($minLevel, $formatter);
         $this->output = fopen('php://stdout', 'w');
+        $this->setFormatter($formatter);
         $this->colorFormatter = new ConsoleColorFormatter();
     }
 
     public function handle(ImmutableValue $record): void
     {
+        if (!$this->isHandling($record)) {
+            return;
+        }
+
         $message = $this->formatter->format($record);
         if ($this->useColors) {
             $message = $this->colorFormatter->format($record->level, $message);

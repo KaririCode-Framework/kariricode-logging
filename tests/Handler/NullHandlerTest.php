@@ -9,7 +9,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class NullHandlerTest extends TestCase
+final class NullHandlerTest extends TestCase
 {
     private NullHandler $nullHandler;
 

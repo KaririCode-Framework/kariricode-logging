@@ -8,7 +8,7 @@ use KaririCode\Logging\Formatter\ConsoleColorFormatter;
 use KaririCode\Logging\LogLevel;
 use PHPUnit\Framework\TestCase;
 
-class ConsoleColorFormatterTest extends TestCase
+final class ConsoleColorFormatterTest extends TestCase
 {
     private ConsoleColorFormatter $formatter;
 

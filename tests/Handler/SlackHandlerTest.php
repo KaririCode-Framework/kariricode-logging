@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\KaririCode\Logging\Handler;
+namespace KaririCode\Logging\Tests\Logging\Handler;
 
 use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Logging\Handler\SlackHandler;
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Util\SlackClient;
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class SlackHandlerTest extends TestCase
+final class SlackHandlerTest extends TestCase
 {
     private SlackClient|MockObject $slackClient;
     private LogFormatter|MockObject $formatter;

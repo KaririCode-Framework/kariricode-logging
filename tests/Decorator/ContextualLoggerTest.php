@@ -10,7 +10,7 @@ use KaririCode\Logging\LogLevel;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class ContextualLoggerTest extends TestCase
+final class ContextualLoggerTest extends TestCase
 {
     private ContextualLogger $contextualLogger;
     private Logger|MockObject $logger;

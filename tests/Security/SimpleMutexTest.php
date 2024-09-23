@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Security;
 use KaririCode\Logging\Security\SimpleMutex;
 use PHPUnit\Framework\TestCase;
 
-class SimpleMutexTest extends TestCase
+final class SimpleMutexTest extends TestCase
 {
     private SimpleMutex $simpleMutex;
 

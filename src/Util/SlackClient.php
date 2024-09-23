@@ -11,39 +11,25 @@ use KaririCode\Logging\Resilience\Retry;
 
 class SlackClient
 {
-    private readonly string $webhookUrl;
-    private readonly CircuitBreaker $circuitBreaker;
-    private readonly Retry $retry;
-    private readonly Fallback $fallback;
-    private readonly CurlClient $curlClient;
+    protected const SLACK_API_URL = 'https://slack.com/api/chat.postMessage';
 
     public function __construct(
-        string $webhookUrl,
-        CircuitBreaker $circuitBreaker,
-        Retry $retry,
-        Fallback $fallback,
-        CurlClient $curlClient
+        private string $botToken,
+        private string $channel,
+        private CircuitBreaker $circuitBreaker = new CircuitBreaker(3, 60),
+        private Retry $retry = new Retry(3, 1000, 2, 100),
+        private Fallback $fallback = new Fallback(),
+        private CurlClient $curlClient = new CurlClient()
     ) {
-        $this->setWebhookUrl($webhookUrl);
-        $this->circuitBreaker = $circuitBreaker;
-        $this->retry = $retry;
-        $this->fallback = $fallback;
-        $this->curlClient = $curlClient;
     }
 
     public static function create(
-        string $webhookUrl,
-        ?CircuitBreaker $circuitBreaker = null,
-        ?Retry $retry = null,
-        ?Fallback $fallback = null,
-        ?CurlClient $curlClient = null
+        string $botToken,
+        string $channel,
     ): self {
         return new self(
-            $webhookUrl,
-            $circuitBreaker ?? new CircuitBreaker(3, 60),
-            $retry ?? new Retry(3, 1000, 2, 100),
-            $fallback ?? new Fallback(),
-            $curlClient ?? new CurlClient()
+            $botToken,
+            $channel
         );
     }
 
@@ -75,13 +61,21 @@ class SlackClient
 
     private function createPayload(string $message): array
     {
-        return ['text' => $message];
+        return [
+            'channel' => $this->channel,
+            'text' => $message,
+        ];
     }
 
     private function sendRequest(array $payload): array
     {
+        $headers = [
+            'Content-Type: application/json; charset=utf-8',
+            'Authorization: Bearer ' . $this->botToken,
+        ];
+
         try {
-            return $this->curlClient->post($this->webhookUrl, $payload);
+            return $this->curlClient->post(self::SLACK_API_URL, $payload, $headers);
         } catch (\JsonException $e) {
             $this->circuitBreaker->recordFailure();
             throw new LoggingException('Failed to encode message for Slack: ' . $e->getMessage(), 0, $e);
@@ -94,26 +88,14 @@ class SlackClient
     private function handleResponse(array $response): void
     {
         $httpCode = $response['status'];
-        $responseBody = $response['body'];
+        $responseBody = json_decode($response['body'], true);
 
-        if ($httpCode < 200 || $httpCode >= 300) {
+        if ($httpCode < 200 || $httpCode >= 300 || !$responseBody['ok']) {
             $this->circuitBreaker->recordFailure();
-            throw new LoggingException('Slack API responded with HTTP code ' . $httpCode . ': ' . $responseBody);
+            $errorMessage = $responseBody['error'] ?? 'Unknown error';
+            throw new LoggingException('Slack API responded with error: ' . $errorMessage);
         }
 
         $this->circuitBreaker->recordSuccess();
-    }
-
-    private function setWebhookUrl(string $webhookUrl): void
-    {
-        if (false === filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException('Invalid webhook URL');
-        }
-        $this->webhookUrl = $webhookUrl;
-    }
-
-    public function getWebhookUrl(): string
-    {
-        return $this->webhookUrl;
     }
 }

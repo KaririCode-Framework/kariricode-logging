@@ -6,10 +6,10 @@ namespace KaririCode\Logging\Tests\Processor;
 
 use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
-use KaririCode\Logging\Processor\MemoryUsageProcessor;
+use KaririCode\Logging\Processor\Metric\MemoryUsageProcessor;
 use PHPUnit\Framework\TestCase;
 
-class MemoryUsageProcessorTest extends TestCase
+final class MemoryUsageProcessorTest extends TestCase
 {
     private MemoryUsageProcessor $memoryUsageProcessor;
 

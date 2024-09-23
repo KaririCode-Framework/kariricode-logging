@@ -5,23 +5,37 @@ declare(strict_types=1);
 namespace KaririCode\Logging;
 
 use KaririCode\Contract\Logging\Logger;
+use KaririCode\Logging\Exception\LoggerNotFoundException;
 
 class LoggerRegistry
 {
-    private static array $loggers = [];
+    /** @var array<string, Logger> */
+    private array $loggers = [];
 
-    public static function addLogger(string $name, Logger $logger): void
+    public function addLogger(string $name, Logger $logger): void
     {
-        self::$loggers[$name] = $logger;
+        if (isset($this->loggers[$name])) {
+            throw new \InvalidArgumentException('Logger with name "' . $name . '" already exists.');
+        }
+
+        $this->loggers[$name] = $logger;
     }
 
-    public static function getLogger(string $name): ?Logger
+    public function getLogger(string $name): ?Logger
     {
-        return self::$loggers[$name] ?? null;
+        if (!isset($this->loggers[$name])) {
+            throw new LoggerNotFoundException('Logger with name "' . $name . '" not found.');
+        }
+
+        return $this->loggers[$name];
     }
 
-    public static function removeLogger(string $name): void
+    public function removeLogger(string $name): void
     {
-        unset(self::$loggers[$name]);
+        if (!isset($this->loggers[$name])) {
+            throw new LoggerNotFoundException('Logger with name "' . $name . '" not found.');
+        }
+
+        unset($this->loggers[$name]);
     }
 }

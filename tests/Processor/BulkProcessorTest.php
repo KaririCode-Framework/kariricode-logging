@@ -9,7 +9,7 @@ use KaririCode\Logging\LogRecord;
 use KaririCode\Logging\Processor\BulkProcessor;
 use PHPUnit\Framework\TestCase;
 
-class BulkProcessorTest extends TestCase
+final class BulkProcessorTest extends TestCase
 {
     private BulkProcessor $bulkProcessor;
     private array $flushedRecords;

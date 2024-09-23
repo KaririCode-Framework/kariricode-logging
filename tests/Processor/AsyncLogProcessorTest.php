@@ -11,7 +11,7 @@ use KaririCode\Logging\Processor\AsyncLogProcessor;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class AsyncLogProcessorTest extends TestCase
+final class AsyncLogProcessorTest extends TestCase
 {
     private AsyncLogProcessor $asyncLogProcessor;
     private Logger|MockObject $logger;

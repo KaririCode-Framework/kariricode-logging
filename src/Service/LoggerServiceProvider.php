@@ -4,72 +4,79 @@ declare(strict_types=1);
 
 namespace KaririCode\Logging\Service;
 
-use KaririCode\Logging\Decorator\AsyncLogger;
+use KaririCode\Logging\Exception\InvalidConfigurationException;
 use KaririCode\Logging\LoggerConfiguration;
 use KaririCode\Logging\LoggerFactory;
 use KaririCode\Logging\LoggerRegistry;
-use KaririCode\Logging\LogLevel;
 
 class LoggerServiceProvider
 {
-    public function register(LoggerConfiguration $config): void
+    public function __construct(
+        private LoggerConfiguration $config,
+        private LoggerFactory $loggerFactory,
+        private LoggerRegistry $loggerRegistry
+    ) {
+    }
+
+    public function register(): void
     {
-        $defaultChannel = $config->get('default');
-        $channelsConfig = $config->get('channels', []);
+        $this->registerDefaultLoggers();
+        $this->registerEmergencyLogger();
+        $this->registerOptionalLoggers();
+    }
+
+    private function registerDefaultLoggers(): void
+    {
+        $defaultChannel = $this->config->get('default');
+        $channelsConfig = $this->config->get('channels');
+
+        if (null === $defaultChannel || null === $channelsConfig) {
+            throw new InvalidConfigurationException("The 'default' and 'channels' configurations are required.");
+        }
 
         foreach ($channelsConfig as $channelName => $channelConfig) {
-            $logger = LoggerFactory::createLogger($channelName, $channelConfig);
-            LoggerRegistry::addLogger($channelName, $logger);
+            $logger = $this->loggerFactory->createLogger($channelName, $channelConfig);
+            $this->loggerRegistry->addLogger($channelName, $logger);
 
             if ($channelName === $defaultChannel) {
-                LoggerRegistry::addLogger('default', $logger);
+                $this->loggerRegistry->addLogger('default', $logger);
             }
         }
+    }
 
-        // Register emergency logger
-        $emergencyLoggerConfig = $config->get('emergency_logger', []);
-        $emergencyLogger = LoggerFactory::createLogger('emergency', $emergencyLoggerConfig);
-        LoggerRegistry::addLogger('emergency', $emergencyLogger);
+    private function registerEmergencyLogger(): void
+    {
+        $emergencyLoggerConfig = $this->config->get('emergency_logger', []);
+        $emergencyLogger = $this->loggerFactory->createLogger(
+            'emergency',
+            $emergencyLoggerConfig
+        );
+        $this->loggerRegistry->addLogger('emergency', $emergencyLogger);
+    }
 
-        // Register query logger
-        if ($config->get('query_logger.enabled', false)) {
-            $queryLogger = LoggerFactory::createQueryLogger(
-                'query',
-                $config->get('query_logger.threshold', 100)
-            );
-            LoggerRegistry::addLogger('query', $queryLogger);
-        }
+    private function registerOptionalLoggers(): void
+    {
+        $this->registerLogger('query', 'createQueryLogger');
+        $this->registerLogger('performance', 'createPerformanceLogger');
+        $this->registerLogger('error', 'createErrorLogger');
+        $this->registerAsyncLoggerIfEnabled();
+    }
 
-        // Register performance logger
-        if ($config->get('performance_logger.enabled', false)) {
-            $performanceLogger = LoggerFactory::createPerformanceLogger(
-                'performance',
-                $config->get('performance_logger.threshold', 1000)
-            );
-            LoggerRegistry::addLogger('performance', $performanceLogger);
-        }
+    private function registerLogger(
+        string $configKey,
+        string $factoryMethod,
+    ): void {
+        $loggerConfig = $this->config->get($configKey, []);
+        $logger = $this->loggerFactory->$factoryMethod($loggerConfig);
+        $this->loggerRegistry->addLogger($configKey, $logger);
+    }
 
-        // Register error logger
-        if ($config->get('error_logger.enabled', true)) {
-            $errorLogger = LoggerFactory::createErrorLogger(
-                'error',
-                $config->get('error_logger.levels', [
-                    LogLevel::ERROR,
-                    LogLevel::CRITICAL,
-                    LogLevel::ALERT,
-                    LogLevel::EMERGENCY,
-                ])
-            );
-            LoggerRegistry::addLogger('error', $errorLogger);
-        }
-
-        // Register async logger if enabled
-        if ($config->get('async.enabled', true)) {
-            $asyncLogger = LoggerFactory::createAsyncLogger(
-                $config->get('async.driver', AsyncLogger::class),
-                $config->get('async.batch_size', 10)
-            );
-            LoggerRegistry::addLogger('async', $asyncLogger);
-        }
+    private function registerAsyncLoggerIfEnabled(): void
+    {
+        $asyncLogger = $this->loggerFactory->createAsyncLogger(
+            $this->loggerRegistry->getLogger('default'),
+            (int) $this->config->get('async.batch_size', 10)
+        );
+        $this->loggerRegistry->addLogger('async', $asyncLogger);
     }
 }

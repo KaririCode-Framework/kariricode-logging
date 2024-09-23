@@ -9,7 +9,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class JsonFormatterTest extends TestCase
+final class JsonFormatterTest extends TestCase
 {
     private JsonFormatter $jsonFormatter;
 

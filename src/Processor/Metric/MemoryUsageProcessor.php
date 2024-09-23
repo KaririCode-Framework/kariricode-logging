@@ -1,9 +1,10 @@
 <?php
 
-namespace KaririCode\Logging\Processor;
+namespace KaririCode\Logging\Processor\Metric;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Logging\LogRecord;
+use KaririCode\Logging\Processor\AbstractProcessor;
 
 class MemoryUsageProcessor extends AbstractProcessor
 {
@@ -21,8 +22,7 @@ class MemoryUsageProcessor extends AbstractProcessor
             $record->level,
             $record->message,
             $context,
-            $record->datetime,
-            $record->extra
+            $record->datetime
         );
     }
 

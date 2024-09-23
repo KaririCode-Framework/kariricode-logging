@@ -9,7 +9,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class ElasticFormatterTest extends TestCase
+final class ElasticFormatterTest extends TestCase
 {
     private ElasticFormatter $formatter;
 

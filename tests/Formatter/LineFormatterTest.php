@@ -9,7 +9,7 @@ use KaririCode\Logging\LogLevel;
 use KaririCode\Logging\LogRecord;
 use PHPUnit\Framework\TestCase;
 
-class LineFormatterTest extends TestCase
+final class LineFormatterTest extends TestCase
 {
     private LineFormatter $formatter;
 

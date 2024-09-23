@@ -50,11 +50,7 @@
     "mockery/mockery": "^1.6",
     "enlightn/security-checker": "^2.0"
   },
-  "scripts": {
-    "post-package-install": [
-      "KaririCode\\Logging\\Util\\ComposerScripts::postPackageInstall"
-    ]
-  },
+  "scripts": {},
   "extra": {
     "branch-alias": {
       "dev-main": "1.0.x-dev"

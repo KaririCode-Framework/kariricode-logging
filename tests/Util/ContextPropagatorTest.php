@@ -7,7 +7,7 @@ namespace KaririCode\Logging\Tests\Util;
 use KaririCode\Logging\Util\ContextPropagator;
 use PHPUnit\Framework\TestCase;
 
-class ContextPropagatorTest extends TestCase
+final class ContextPropagatorTest extends TestCase
 {
     public function testSetGetContext(): void
     {

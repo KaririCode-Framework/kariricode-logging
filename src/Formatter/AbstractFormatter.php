@@ -37,12 +37,11 @@ abstract class AbstractFormatter implements LogFormatter, FormatterAware, Immuta
         return $this->formatter;
     }
 
-    // Implement the toArray method required by ImmutableValue interface
     public function toArray(): array
     {
         return [
             'dateFormat' => $this->dateFormat,
-            'formatter' => $this->formatter instanceof ImmutableValue ? $this->formatter->toArray() : (string) $this->formatter,
+            'formatter' => $this->formatter->toArray() ?? null,
         ];
     }
 }

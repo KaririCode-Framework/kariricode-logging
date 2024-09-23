@@ -6,11 +6,12 @@ namespace KaririCode\Logging\Tests\Logger;
 
 use KaririCode\Contract\Logging\Logger;
 use KaririCode\Contract\Logging\Structural\HandlerAware;
+use KaririCode\Contract\Logging\Structural\ProcessorAware;
 use KaririCode\Logging\Formatter\LineFormatter;
 use KaririCode\Logging\LoggerBuilder;
 use PHPUnit\Framework\TestCase;
 
-class LoggerBuilderTest extends TestCase
+final class LoggerBuilderTest extends TestCase
 {
     public function testBuildLogger(): void
     {
@@ -26,7 +27,7 @@ class LoggerBuilderTest extends TestCase
         $handler = $this->createMock(HandlerAware::class);
         $builder = new LoggerBuilder('test');
         $builder->withHandler($handler);
-
+        /** @var LoggerManager */
         $logger = $builder->build();
 
         $this->assertContains($handler, $logger->getHandlers());
@@ -34,10 +35,11 @@ class LoggerBuilderTest extends TestCase
 
     public function testWithProcessor(): void
     {
-        $processor = $this->createMock(\KaririCode\Contract\Logging\ProcessorAware::class);
+        $processor = $this->createMock(ProcessorAware::class);
         $builder = new LoggerBuilder('test');
         $builder->withProcessor($processor);
 
+        /** @var LoggerManager */
         $logger = $builder->build();
 
         $this->assertContains($processor, $logger->getProcessors());
@@ -49,6 +51,7 @@ class LoggerBuilderTest extends TestCase
         $builder = new LoggerBuilder('test');
         $builder->withFormatter($formatter);
 
+        /** @var LoggerManager */
         $logger = $builder->build();
 
         $this->assertSame($formatter, $logger->getFormatter());

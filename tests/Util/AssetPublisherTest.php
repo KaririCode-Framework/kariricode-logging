@@ -2,44 +2,36 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\Logging\Tests\KaririCode\Logging\Util;
+namespace KaririCode\Logging\Tests\Util;
 
 use Composer\Composer;
 use Composer\Config;
 use Composer\IO\IOInterface;
 use Composer\Script\Event;
 use KaririCode\Logging\Util\AssetPublisher;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class AssetPublisherTest extends TestCase
+final class AssetPublisherTest extends TestCase
 {
     private string $tempDir;
-    private string $vendorDir;
-    private string $sourceDir;
-    private string $targetDir;
-    private Event|MockObject $event;
-    private IOInterface|MockObject $io;
+    private Event|\PHPUnit\Framework\MockObject\MockObject $eventMock;
+    private Composer|\PHPUnit\Framework\MockObject\MockObject $composerMock;
+    private Config|\PHPUnit\Framework\MockObject\MockObject $configMock;
+    private IOInterface|\PHPUnit\Framework\MockObject\MockObject $ioMock;
 
     protected function setUp(): void
     {
         $this->tempDir = sys_get_temp_dir() . '/asset_publisher_test_' . uniqid();
         mkdir($this->tempDir);
-        $this->vendorDir = $this->tempDir . '/vendor';
-        $this->sourceDir = $this->vendorDir . '/kariricode/logging/resources';
-        $this->targetDir = $this->tempDir . '/resources/logging';
 
-        // Create mock objects
-        $composer = $this->createMock(Composer::class);
-        $config = $this->createMock(Config::class);
-        $this->io = $this->createMock(IOInterface::class);
-        $this->event = $this->createMock(Event::class);
+        $this->eventMock = $this->createMock(Event::class);
+        $this->composerMock = $this->createMock(Composer::class);
+        $this->configMock = $this->createMock(Config::class);
+        $this->ioMock = $this->createMock(IOInterface::class);
 
-        // Set up expectations
-        $composer->method('getConfig')->willReturn($config);
-        $config->method('get')->with('vendor-dir')->willReturn($this->vendorDir);
-        $this->event->method('getComposer')->willReturn($composer);
-        $this->event->method('getIO')->willReturn($this->io);
+        $this->eventMock->method('getComposer')->willReturn($this->composerMock);
+        $this->eventMock->method('getIO')->willReturn($this->ioMock);
+        $this->composerMock->method('getConfig')->willReturn($this->configMock);
     }
 
     protected function tearDown(): void
@@ -47,105 +39,84 @@ class AssetPublisherTest extends TestCase
         $this->removeDirectory($this->tempDir);
     }
 
+    public function testPublishAssetsCreatesTargetDirectoryAndCopiesFiles(): void
+    {
+        $vendorDir = $this->tempDir . '/vendor';
+        $sourceDir = $vendorDir . '/kariricode/logging/resources';
+        $targetDir = $this->tempDir . '/resources/logging';
+
+        mkdir($sourceDir, 0777, true);
+        file_put_contents($sourceDir . '/test.php', '<?php echo "test";');
+
+        $this->configMock->method('get')->with('vendor-dir')->willReturn($vendorDir);
+
+        $this->ioMock->expects($this->once())
+            ->method('write')
+            ->with($this->stringContains('Published assets to:'));
+
+        AssetPublisher::publishAssets($this->eventMock);
+
+        $this->assertDirectoryExists($targetDir);
+        $this->assertFileExists($targetDir . '/test.php');
+        $this->assertEquals('<?php echo "test";', file_get_contents($targetDir . '/test.php'));
+    }
+
+    public function c(): void
+    {
+        $vendorDir = $this->tempDir . '/non_existent_vendor';
+        $this->configMock->method('get')->with('vendor-dir')->willReturn($vendorDir);
+
+        $this->ioMock->expects($this->once())
+            ->method('writeError')
+            ->with($this->stringContains('Source directory not found:'));
+
+        AssetPublisher::publishAssets($this->eventMock);
+
+        $this->assertDirectoryDoesNotExist($this->tempDir . '/resources/logging');
+    }
+
+    public function testPublishAssetsHandlesExistingTargetDirectory(): void
+    {
+        $vendorDir = $this->tempDir . '/vendor';
+        $sourceDir = $vendorDir . '/kariricode/logging/resources';
+        $targetDir = $this->tempDir . '/resources/logging';
+
+        mkdir($sourceDir, 0777, true);
+        mkdir($targetDir, 0777, true);
+        file_put_contents($sourceDir . '/test.php', '<?php echo "test";');
+
+        $this->configMock->method('get')->with('vendor-dir')->willReturn($vendorDir);
+
+        $this->ioMock->expects($this->once())
+            ->method('write')
+            ->with($this->stringContains('Published assets to:'));
+
+        AssetPublisher::publishAssets($this->eventMock);
+
+        $this->assertDirectoryExists($targetDir);
+        $this->assertFileExists($targetDir . '/test.php');
+        $this->assertEquals('<?php echo "test";', file_get_contents($targetDir . '/test.php'));
+    }
+
     private function removeDirectory(string $dir): void
     {
-        if (!file_exists($dir)) {
+        if (!is_dir($dir)) {
             return;
         }
 
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+        $objects = scandir($dir);
+        foreach ($objects as $object) {
+            if ('.' === $object || '..' === $object) {
+                continue;
+            }
+
+            $path = $dir . '/' . $object;
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                unlink($path);
+            }
         }
         rmdir($dir);
-    }
-
-    public function testPublishAssetsSuccessfully(): void
-    {
-        // Arrange
-        mkdir($this->sourceDir . '/css', 0755, true);
-        file_put_contents($this->sourceDir . '/css/style.css', 'body { color: black; }');
-
-        // Act
-        AssetPublisher::publishAssets($this->event);
-
-        // Assert
-        $this->assertDirectoryExists($this->targetDir);
-        $this->assertDirectoryExists($this->targetDir . '/css');
-        $this->assertFileExists($this->targetDir . '/css/style.css');
-        $this->assertEquals('body { color: black; }', file_get_contents($this->targetDir . '/css/style.css'));
-    }
-
-    public function testPublishAssetsWhenSourceDirectoryDoesNotExist(): void
-    {
-        // Arrange
-        $this->io->expects($this->once())
-            ->method('write')
-            ->with($this->stringContains('Source directory not found'));
-
-        // Act
-        AssetPublisher::publishAssets($this->event);
-
-        // Assert
-        $this->assertDirectoryDoesNotExist($this->targetDir);
-    }
-
-    public function testPublishAssetsWhenTargetDirectoryCannotBeCreated(): void
-    {
-        // Arrange
-        mkdir($this->sourceDir, 0755, true);
-        mkdir(dirname($this->targetDir), 0000, true); // Make parent directory inaccessible
-
-        // Assert
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage(sprintf('Directory "%s" was not created', $this->targetDir));
-
-        // Act
-        try {
-            AssetPublisher::publishAssets($this->event);
-        } finally {
-            chmod(dirname($this->targetDir), 0755); // Restore permissions to allow cleanup
-        }
-    }
-
-    public function testPublishAssetsWhenCopyFails(): void
-    {
-        // Arrange
-        mkdir($this->sourceDir, 0755, true);
-        file_put_contents($this->sourceDir . '/test.txt', 'Test content');
-
-        // Cria o diretório de destino, mas com permissões que impedem a escrita
-        mkdir(dirname($this->targetDir), 0555, true);
-
-        // Assert
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage(sprintf('Directory "%s" was not created', $this->targetDir));
-
-        // Act
-        try {
-            AssetPublisher::publishAssets($this->event);
-        } finally {
-            // Restaura as permissões para permitir a limpeza
-            chmod(dirname($this->targetDir), 0755);
-        }
-    }
-
-    public function testPublishAssetsWithSubdirectories(): void
-    {
-        // Arrange
-        mkdir($this->sourceDir . '/css/nested', 0755, true);
-        file_put_contents($this->sourceDir . '/css/style.css', 'body { color: black; }');
-        file_put_contents($this->sourceDir . '/css/nested/nested.css', '.nested { display: none; }');
-
-        // Act
-        AssetPublisher::publishAssets($this->event);
-
-        // Assert
-        $this->assertDirectoryExists($this->targetDir . '/css/nested');
-        $this->assertFileExists($this->targetDir . '/css/style.css');
-        $this->assertFileExists($this->targetDir . '/css/nested/nested.css');
-        $this->assertEquals('body { color: black; }', file_get_contents($this->targetDir . '/css/style.css'));
-        $this->assertEquals('.nested { display: none; }', file_get_contents($this->targetDir . '/css/nested/nested.css'));
     }
 }

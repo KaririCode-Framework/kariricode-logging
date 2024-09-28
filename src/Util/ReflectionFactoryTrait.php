@@ -103,11 +103,16 @@ trait ReflectionFactoryTrait
      */
     protected function getClassFromMap(array $map, string $key): string
     {
-        if (!isset($map[$key])) {
+        if ($this->configurationNotFound($map, $key)) {
             throw new InvalidConfigurationException("Configuration not found for key: $key");
         }
 
         return self::validateAndExtractClass($map[$key], $key);
+    }
+
+    private function configurationNotFound(array $map, string $key): bool
+    {
+        return !isset($map[$key]);
     }
 
     /**

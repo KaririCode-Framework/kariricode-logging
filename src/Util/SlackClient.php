@@ -75,7 +75,7 @@ class SlackClient
         ];
 
         try {
-            return $this->curlClient->post(self::SLACK_API_URL, $payload, $headers);
+            return $this->postToSlack($payload, $headers);
         } catch (\JsonException $e) {
             $this->circuitBreaker->recordFailure();
             throw new LoggingException('Failed to encode message for Slack: ' . $e->getMessage(), 0, $e);
@@ -83,6 +83,11 @@ class SlackClient
             $this->circuitBreaker->recordFailure();
             throw new LoggingException('Failed to send message to Slack: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    private function postToSlack(array $payload, array $headers): array
+    {
+        return $this->curlClient->post(self::SLACK_API_URL, $payload, $headers);
     }
 
     private function handleResponse(array $response): void

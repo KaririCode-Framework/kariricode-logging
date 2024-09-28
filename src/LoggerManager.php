@@ -51,12 +51,17 @@ class LoggerManager implements Logger
     private function passesThreshold(array $context): bool
     {
         foreach ($this->thresholds as $key => $threshold) {
-            if (isset($context[$key]) && $context[$key] < $threshold) {
+            if ($this->contextBelowThreshold($context, $key, $threshold)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private function contextBelowThreshold(array $context, string $key, int $threshold): bool
+    {
+        return isset($context[$key]) && $context[$key] < $threshold;
     }
 
     public function addHandler(HandlerAware $handler): self

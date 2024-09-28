@@ -24,13 +24,19 @@ abstract class AbstractFileHandler extends AbstractHandler
     protected function ensureDirectoryExists(): void
     {
         $directory = dirname($this->filePath);
-        if (!is_dir($directory)) {
-            if (!$this->createDirectory($directory)) {
-                throw new LoggingException("Unable to create log directory: $directory");
-            }
-        } elseif (!$this->isDirectoryWritable($directory)) {
+
+        if ($this->directoryDoesNotExist($directory) && !$this->createDirectory($directory)) {
+            throw new LoggingException("Unable to create log directory: $directory");
+        }
+
+        if (!$this->isDirectoryWritable($directory)) {
             throw new LoggingException("Log directory is not writable: $directory");
         }
+    }
+
+    private function directoryDoesNotExist(string $directory): bool
+    {
+        return !is_dir($directory);
     }
 
     protected function createDirectory($path)

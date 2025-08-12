@@ -6,7 +6,6 @@ namespace KaririCode\Logging;
 
 use KaririCode\Contract\Logging\LogFormatter;
 use KaririCode\Contract\Logging\Logger;
-use KaririCode\Contract\Logging\Structural\FormatterAware;
 use KaririCode\Contract\Logging\Structural\HandlerAware;
 use KaririCode\Contract\Logging\Structural\ProcessorAware;
 use KaririCode\Logging\Formatter\LineFormatter;
@@ -38,7 +37,7 @@ class LoggerBuilder
         return $this;
     }
 
-    public function withFormatter(FormatterAware $formatter): self
+    public function withFormatter(LogFormatter $formatter): self
     {
         $this->formatter = $formatter;
 

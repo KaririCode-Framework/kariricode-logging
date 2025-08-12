@@ -6,42 +6,79 @@ namespace KaririCode\Logging\Formatter;
 
 use KaririCode\Contract\ImmutableValue;
 use KaririCode\Contract\Logging\LogFormatter;
-use KaririCode\Contract\Logging\Structural\FormatterAware;
 
-abstract class AbstractFormatter implements LogFormatter, FormatterAware, ImmutableValue
+abstract class AbstractFormatter implements LogFormatter
 {
-    protected ImmutableValue $formatter;
-
+    /**
+     * @param string $dateFormat The date format pattern for timestamps
+     * @param bool $includeContext Whether to include context in formatted output
+     * @param bool $includeExtra Whether to include extra data in formatted output
+     */
     public function __construct(
-        protected string $dateFormat = 'Y-m-d H:i:s'
+        public readonly string $dateFormat = 'Y-m-d H:i:s',
+        public readonly bool $includeContext = true,
+        public readonly bool $includeExtra = false
     ) {
-        $this->formatter = $this;
     }
 
+    /**
+     * Format a single log record.
+     */
     abstract public function format(ImmutableValue $record): string;
 
+    /**
+     * Format multiple log records.
+     */
     public function formatBatch(array $records): string
     {
-        return implode("\n", array_map([$this, 'format'], $records));
+        return implode(PHP_EOL, array_map([$this, 'format'], $records));
     }
 
-    public function setFormatter(ImmutableValue $formatter): AbstractFormatter
+    /**
+     * Create a new formatter with different date format.
+     */
+    public function withDateFormat(string $dateFormat): static
     {
-        $this->formatter = $formatter;
-
-        return $this;
+        return new static(
+            $dateFormat,
+            $this->includeContext,
+            $this->includeExtra
+        );
     }
 
-    public function getFormatter(): ImmutableValue
+    /**
+     * Create a new formatter with context inclusion setting.
+     */
+    public function withContextInclusion(bool $include): static
     {
-        return $this->formatter;
+        return new static(
+            $this->dateFormat,
+            $include,
+            $this->includeExtra
+        );
     }
 
-    public function toArray(): array
+    /**
+     * Format the timestamp according to the configured format.
+     */
+    protected function formatTimestamp(\DateTimeImmutable $datetime): string
     {
-        return [
-            'dateFormat' => $this->dateFormat,
-            'formatter' => $this->formatter->toArray() ?? null,
-        ];
+        return $datetime->format($this->dateFormat);
+    }
+
+    /**
+     * Check if the formatter should include context.
+     */
+    protected function shouldIncludeContext(array $context): bool
+    {
+        return $this->includeContext && !empty($context);
+    }
+
+    /**
+     * Check if the formatter should include extra data.
+     */
+    protected function shouldIncludeExtra(array $extra): bool
+    {
+        return $this->includeExtra && !empty($extra);
     }
 }

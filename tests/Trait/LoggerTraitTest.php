@@ -51,7 +51,7 @@ final class LoggerTraitTest extends TestCase
 
     public function testLogWithStringableMessage(): void
     {
-        $stringableMessage = new class() implements \Stringable {
+        $stringableMessage = new class implements \Stringable {
             public function __toString(): string
             {
                 return 'Stringable message';

@@ -5,42 +5,145 @@ declare(strict_types=1);
 namespace KaririCode\Logging\Formatter;
 
 use KaririCode\Contract\ImmutableValue;
+use KaririCode\Logging\LogRecord;
 
-class JsonFormatter extends AbstractFormatter
+/**
+ * JSON formatter optimized for direct property access.
+ */
+final class JsonFormatter extends AbstractFormatter
 {
-    private const JSON_OPTIONS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+    private const JSON_OPTIONS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR;
 
+    /**
+     * @param string $dateFormat Date format pattern
+     * @param bool $includeContext Include context in output
+     * @param bool $includeExtra Include extra data in output
+     * @param bool $prettyPrint Pretty print JSON output
+     * @param bool $includeStacktraces Include stack traces for exceptions
+     */
+    public function __construct(
+        string $dateFormat = 'Y-m-d H:i:s',
+        bool $includeContext = true,
+        bool $includeExtra = false,
+        public readonly bool $prettyPrint = false,
+        public readonly bool $includeStacktraces = false
+    ) {
+        parent::__construct($dateFormat, $includeContext, $includeExtra);
+    }
+
+    /**
+     * Format log record to JSON using direct property access.
+     */
     public function format(ImmutableValue $record): string
     {
-        $data = $this->prepareData($record);
+        if (!$record instanceof LogRecord) {
+            throw new \InvalidArgumentException('Record must be an instance of LogRecord');
+        }
+
+        // Direct property access - no toArray() needed
+        $data = [
+            'datetime' => $this->formatTimestamp($record->datetime),
+            'level' => $record->level->value,
+            'message' => $record->getMessageAsString(),
+        ];
+
+        // Conditionally add context and extra
+        if ($this->shouldIncludeContext($record->context)) {
+            $data['context'] = $this->processContext($record->context);
+        }
+
+        if ($this->shouldIncludeExtra($record->extra)) {
+            $data['extra'] = $record->extra;
+        }
 
         return $this->encodeJson($data);
     }
 
+    /**
+     * Format batch of records.
+     */
     public function formatBatch(array $records): string
     {
-        $formattedRecords = array_map([$this, 'prepareData'], $records);
+        $formattedRecords = array_map(
+            fn ($record) => $this->prepareData($record),
+            $records
+        );
 
         return $this->encodeJson($formattedRecords);
     }
 
+    /**
+     * Prepare data from record using direct property access.
+     */
     private function prepareData(ImmutableValue $record): array
     {
-        $data = [
-            'datetime' => $record->datetime->format($this->dateFormat),
-            'level' => $record->level->value,
-            'message' => $record->message,
-        ];
-
-        if (!empty($record->context)) {
-            $data['context'] = $record->context;
+        if (!$record instanceof LogRecord) {
+            throw new \InvalidArgumentException('Record must be an instance of LogRecord');
         }
 
-        return $data;
+        return [
+            'datetime' => $this->formatTimestamp($record->datetime),
+            'level' => $record->level->value,
+            'message' => $record->getMessageAsString(),
+            'context' => $record->hasContext() ? $this->processContext($record->context) : null,
+            'extra' => $record->hasExtra() ? $record->extra : null,
+        ];
     }
 
-    private function encodeJson($data): string
+    /**
+     * Process context to handle exceptions if needed.
+     */
+    private function processContext(array $context): array
     {
-        return json_encode($data, self::JSON_OPTIONS | JSON_THROW_ON_ERROR);
+        if (!$this->includeStacktraces) {
+            return $context;
+        }
+
+        // Handle exceptions in context
+        foreach ($context as $key => $value) {
+            if ($value instanceof \Throwable) {
+                $context[$key] = $this->formatException($value);
+            }
+        }
+
+        return $context;
+    }
+
+    /**
+     * Format exception for JSON output.
+     */
+    private function formatException(\Throwable $exception): array
+    {
+        $formatted = [
+            'class' => get_class($exception),
+            'message' => $exception->getMessage(),
+            'code' => $exception->getCode(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+        ];
+
+        if ($this->includeStacktraces) {
+            $formatted['trace'] = $exception->getTraceAsString();
+        }
+
+        if ($exception->getPrevious()) {
+            $formatted['previous'] = $this->formatException($exception->getPrevious());
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Encode data to JSON with configured options.
+     */
+    private function encodeJson(mixed $data): string
+    {
+        $options = self::JSON_OPTIONS;
+
+        if ($this->prettyPrint) {
+            $options |= JSON_PRETTY_PRINT;
+        }
+
+        return json_encode($data, $options);
     }
 }
